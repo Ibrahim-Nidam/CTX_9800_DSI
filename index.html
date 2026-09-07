@@ -921,6 +921,91 @@ const PM_TORQUE_TABLE = [
  ['Power cover to slip-ring, encoder, transmitter','Captive fastener, M5','1.3'],
 ];
 
+/* =========================================================================
+   LEARNING PATH — structured onboarding curriculum for a new technician.
+   Reuses the PM checklist's accordion/checkbox/localStorage pattern.
+   goto: {v:'<viewId>'} jumps to a page, {b:'<boardId>'} opens a board,
+         {e:'<SYS>'} opens Errors & Faults pre-filtered.
+   ========================================================================= */
+const LEARN_STAGES = [
+ {n:0, title:'Before you touch anything', tip:'Nothing else in this path matters if you get hurt. Every experienced tech starts exactly here — no shortcuts.', items:[
+   {id:'s0-1', text:'Locate every E-Stop button on the machine. With a supervisor present, press one and watch what happens.', goto:{v:'motion'}},
+   {id:'s0-2', text:'Learn both lock-out/tag-out procedures: mains LOTO on the PDP, and the separate gantry-lock LOTO.', goto:{v:'maintenance'}},
+   {id:'s0-3', text:'Get fitted for PPE. Steel-toed shoes and safety glasses are non-negotiable from day one.', how:['See the Toolkit section below on this page for the full PPE list']},
+   {id:'s0-4', text:'Walk the machine end-to-end. Find the Input, Scanner, and Output modules with your own eyes before reading another word about them.', goto:{v:'overview'}},
+ ]},
+ {n:1, title:'The big picture', tip:'Don\u2019t memorize anything yet — just get the overall shape of the machine into your head.', items:[
+   {id:'s1-1', text:'Read the Overview page. Understand what CT baggage screening actually does and why it\u2019s built this way.', goto:{v:'overview'}},
+   {id:'s1-2', text:'Skim the Glossary once, front to back. Don\u2019t memorize — just get to where the abbreviations look familiar.', goto:{v:'glossary'}},
+   {id:'s1-3', text:'Trace the Full Electrical Flow diagram with your finger, from facility mains all the way to the last card.', goto:{v:'fullflow'}},
+ ]},
+ {n:2, title:'Power — the foundation everything depends on', tip:'If you can\u2019t explain where a board\u2019s power actually comes from, you\u2019re not ready to troubleshoot it yet.', items:[
+   {id:'s2-1', text:'Read Power & Distribution end to end.', goto:{v:'power'}},
+   {id:'s2-2', text:'Self-check: what sits between the wall outlet and the UPS? What sits between the UPS and a single DMA? If you can\u2019t answer both, reread the diagram.'},
+   {id:'s2-3', text:'In the Board Library, read: Autotransformer, UPS, both PDP sections, and the Gantry Power Supply.', goto:{v:'boards'}},
+ ]},
+ {n:3, title:'DAS — the imaging heart', tip:'This is the most complex subsystem on the machine. Budget real, unhurried time here — it pays off everywhere else.', items:[
+   {id:'s3-1', text:'Read DAS / Imaging and trace one DMA\u2019s complete signal path from detector to Host.', goto:{v:'das'}},
+   {id:'s3-2', text:'In the Board Library, read DFA/DMA, A/D Board, DIFB, GBP, and DCB in full.', goto:{v:'boards'}},
+   {id:'s3-3', text:'Open the DIFB fault codes in Errors & Faults — this is the fault family you\u2019ll see the most.', goto:{e:'DIFB'}},
+ ]},
+ {n:4, title:'X-rays — the dangerous part', tip:'Nobody touches the HVPS alone in their first month. Understand it fully before you go near it.', items:[
+   {id:'s4-1', text:'Read X-Ray / HVPS and understand why the HVIC exists as a safety middleman instead of wiring the Host straight to the HVPS.', goto:{v:'xray'}},
+   {id:'s4-2', text:'Review all 8 HVPS status and fault signals.', goto:{e:'HVPS'}},
+   {id:'s4-3', text:'Read how the X-ray-ON indicator gets calibrated to 60 kV — it\u2019s a real PM step, not just a light bulb.', goto:{v:'pm'}},
+ ]},
+ {n:5, title:'Motion & the safety loop', tip:'The dual-loop E-Stop chain is the single most important safety system on this machine. Know it cold.', items:[
+   {id:'s5-1', text:'Read Motion & Safety Loop fully — then read it again a second time.', goto:{v:'motion'}},
+   {id:'s5-2', text:'Read Gantry & Conveyor mechanics, including the gantry lock procedure.', goto:{v:'mechanical'}},
+   {id:'s5-3', text:'Know that the Lenze servo drives report ~40 fault codes. You don\u2019t need to memorize them — just know exactly where to look.', goto:{e:'LENZE'}},
+ ]},
+ {n:6, title:'Where the data goes', tip:'Most new techs never think past the gantry. Don\u2019t be most techs — know where the bytes actually end up.', items:[
+   {id:'s6-1', text:'Read Data Flow and understand why there are three separate networks instead of one.', goto:{v:'dataflow'}},
+   {id:'s6-2', text:'Be able to name the ADAM I/O modules and what each one actually does.', goto:{b:'adam'}},
+ ]},
+ {n:7, title:'Keeping it running', tip:'Reading a PM checklist and actually performing one for real are two different skills — build the first before attempting the second.', items:[
+   {id:'s7-1', text:'Read Calibration & Care in full.', goto:{v:'maintenance'}},
+   {id:'s7-2', text:'Open the PM Checklist and read every single step once, even the ones you won\u2019t personally do for a while yet.', goto:{v:'pm'}},
+   {id:'s7-3', text:'Shadow a senior FST through one complete real PM before you ever attempt one solo.'},
+ ]},
+ {n:8, title:'Becoming the troubleshooter', tip:'This is where knowledge turns into instinct — and it only comes from reps, not more reading.', items:[
+   {id:'s8-1', text:'Click through every single board in the Board Library at least once, even the ones that seem boring.', goto:{v:'boards'}},
+   {id:'s8-2', text:'Pick 5 random rows in Errors & Faults. For each one, say out loud which board owns it before checking.', goto:{v:'errors'}},
+   {id:'s8-3', text:'Start a personal notebook: every real fault you see, write down what it was and how it actually got fixed. This matters more than anything else on this page.'},
+ ]},
+];
+const LEARN_KEEPGOING = [
+ 'Ask "why" a part fails, not just "how" to replace it — the why is what makes you fast at diagnosing the next one.',
+ 'Re-read Errors & Faults every few weeks. Patterns you didn\u2019t notice the first time will start jumping out.',
+ 'Volunteer for PMs whenever you can — repetition on the checklist is what builds real muscle memory.',
+ 'Keep talking to senior FSTs. The manual tells you what the system does; they\u2019ll tell you what actually goes wrong in the field.',
+];
+const LEARN_TOOLKIT = {
+ physical:[
+   ['Triangular 7 mm key', 'P/N 1409-0003 — opens almost every access panel on the machine'],
+   ['Calibrated torque wrench', 'Required for every fastener spec in the PM Checklist — never use an uncalibrated one'],
+   ['Digital multimeter', 'For voltage checks like the 330 VDC gantry test'],
+   ['Grease gun + Kluber Isoflex Topas NCA 52', 'The ONLY approved gantry-bearing grease — no substitutes'],
+   ['ESD-safe vacuum (Metro DV-3ESD1 or equiv.)', 'Required inside the gantry — a normal shop vacuum can damage electronics'],
+   ['Flashlight', 'For drive-belt and gantry interior inspection'],
+ ],
+ ppe:[
+   ['Steel-toed shoes', 'Required, always'],
+   ['Safety glasses / tight-fitting goggles', 'Required, always'],
+   ['Disposable dust mask', 'Recommended for slip-ring/brush block work'],
+   ['Nitrile gloves', 'Recommended for slip-ring/brush block work'],
+   ['Red + Yellow LOTO lock & tag sets', 'Keep both — different colors are used for different lockout scenarios'],
+ ],
+ software:[
+   ['McGUI', 'Motion control diagnostics — jog the gantry/conveyor, watch live drive status'],
+   ['DMT (Diagnostic and Maintenance Tools)', 'Runs the formal unit tests: gantry performance, encoder, calibration rotating'],
+   ['SystemTools', 'Bad-pixel map review and detector health, run from the ACQ computer'],
+   ['EDS Configuration Tool', 'localhost:8080 on the Host — configuration changes, "Different from Default" list'],
+ ],
+};
+
+
+
 
 /* =========================================================================
    SVG DIAGRAM HELPERS
@@ -971,6 +1056,9 @@ function legend(items){
    NAVIGATION CONFIG
    ========================================================================= */
 const NAV = [
+  {group:'Start Here', items:[
+    {id:'learn', label:'Learning Path', color:'control', cnt:LEARN_STAGES.reduce((n,s)=>n+s.items.length,0)},
+  ]},
   {group:'System', items:[
     {id:'overview', label:'Overview', color:'data'},
     {id:'glossary', label:'Glossary', color:'data', cnt:GLOSSARY.length},
@@ -1678,6 +1766,191 @@ function pmItemVisible(freq, period){
   return true; // semiannual & annual: everything
 }
 
+/* =========================================================================
+   LEARNING PATH — guided curriculum, same accordion/checkbox pattern as PM
+   ========================================================================= */
+const LEARN_STORE_KEY = 'ctx9800_learn_progress_v1';
+function learnLoadState(){
+  try{ return JSON.parse(localStorage.getItem(LEARN_STORE_KEY) || '{}'); }
+  catch(e){ return {}; }
+}
+function learnSaveState(state){
+  try{ localStorage.setItem(LEARN_STORE_KEY, JSON.stringify(state)); }catch(e){}
+}
+window.__learnOpenSections = new Set([0]);
+window.__learnExpanded = new Set();
+
+function learnGoto(goto){
+  if(!goto) return;
+  if(goto.v) selectView(goto.v);
+  else if(goto.b) goBoard(goto.b);
+  else if(goto.e) goErrors(goto.e);
+}
+function learnGotoById(itemId){
+  for(const sec of LEARN_STAGES){
+    const it = sec.items.find(x=>x.id===itemId);
+    if(it){ learnGoto(it.goto); return; }
+  }
+}
+
+function viewLearn(){
+  const totalItems = LEARN_STAGES.reduce((n,s)=>n+s.items.length,0);
+  return `
+  <div class="page-head">
+    <div class="page-eyebrow">START HERE</div>
+    <h1>Learning path — new technician</h1>
+    <p class="page-desc">A structured order to actually learn this machine, not just look things up in it. Nine stages, easy start to independent troubleshooting. Check items off as you go — your progress is saved on this device.</p>
+  </div>
+
+  <div class="pm-progress-wrap">
+    <div class="pm-progress-top">
+      <span class="pm-progress-label" id="learn-progress-label">0 / ${totalItems} complete</span>
+      <div style="display:flex;gap:8px;">
+        <button class="pm-reset-btn" style="border-color:var(--data);color:var(--data);" onclick="learnContinue()">Continue where I left off</button>
+        <button class="pm-reset-btn" onclick="resetLearnProgress()">Reset progress</button>
+      </div>
+    </div>
+    <div class="pm-progress-bar"><div class="pm-progress-fill" id="learn-progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <div id="learn-sections"></div>
+
+  <h2 class="sec" style="margin-top:30px;"><span class="bar" style="background:var(--power)"></span>Keep growing</h2>
+  <div class="grid cols-2">
+    ${LEARN_KEEPGOING.map(t=>`<div class="callout" style="margin:0;">${t}</div>`).join('')}
+  </div>
+
+  <h2 class="sec" style="margin-top:30px;"><span class="bar" style="background:var(--mechc)"></span>Your toolkit</h2>
+  <p class="page-desc" style="margin-bottom:12px;">Tools, PPE, and software referenced throughout this path — nothing here is optional-feeling once you actually start working on the machine.</p>
+  <div class="grid cols-3">
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:8px;font-size:12.5px;color:var(--mechc);">🔧 Physical tools</div>
+      ${LEARN_TOOLKIT.physical.map(([n,d])=>`<div style="margin-bottom:8px;"><div style="font-size:12px;font-weight:600;">${n}</div><div style="font-size:11px;color:var(--text-dim);">${d}</div></div>`).join('')}
+    </div>
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:8px;font-size:12.5px;color:var(--safety);">🦺 PPE</div>
+      ${LEARN_TOOLKIT.ppe.map(([n,d])=>`<div style="margin-bottom:8px;"><div style="font-size:12px;font-weight:600;">${n}</div><div style="font-size:11px;color:var(--text-dim);">${d}</div></div>`).join('')}
+    </div>
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:8px;font-size:12.5px;color:var(--data);">💻 Software</div>
+      ${LEARN_TOOLKIT.software.map(([n,d])=>`<div style="margin-bottom:8px;"><div style="font-size:12px;font-weight:600;">${n}</div><div style="font-size:11px;color:var(--text-dim);">${d}</div></div>`).join('')}
+    </div>
+  </div>
+  <div class="callout" style="cursor:pointer;margin-top:14px;" onclick="selectView('pm')"><strong>Ready to actually do maintenance? →</strong> the full interactive PM Checklist is waiting for you.</div>`;
+}
+
+function learnItemRow(it){
+  const state = learnLoadState();
+  const done = !!state[it.id];
+  const expanded = window.__learnExpanded.has(it.id);
+  const hasDetail = !!(it.how || it.goto);
+  let gotoLabel = '';
+  if(it.goto){
+    if(it.goto.v){ const label = (NAV.flatMap(g=>g.items).find(n=>n.id===it.goto.v)||{}).label || it.goto.v; gotoLabel = `→ Open ${label}`; }
+    else if(it.goto.b){ const b = BOARDS.find(x=>x.id===it.goto.b); gotoLabel = `→ View ${b?b.name:it.goto.b}`; }
+    else if(it.goto.e){ gotoLabel = `→ Open Errors: ${it.goto.e}`; }
+  }
+  return `
+  <div class="pm-item${done?' done':''}${expanded?' expanded':''}" id="learnrow-${it.id}">
+    <div class="pm-item-row">
+      <input type="checkbox" class="pm-checkbox" ${done?'checked':''} onclick="toggleLearnCheck('${it.id}', event)">
+      <div class="pm-item-main" onclick="toggleLearnDetail('${it.id}')">
+        <div class="pm-item-text">${it.text}</div>
+        ${hasDetail?`<div class="pm-item-meta"><span class="pm-caret-mini">▾ detail</span></div>`:''}
+      </div>
+    </div>
+    ${hasDetail?`<div class="pm-item-detail">
+      <div class="pm-how-box">
+        ${it.how?`<ul>${it.how.map(h=>`<li>${h}</li>`).join('')}</ul>`:''}
+        ${it.goto?`<button class="pm-goto-btn" onclick="event.stopPropagation();learnGotoById('${it.id}')">${gotoLabel}</button>`:''}
+      </div>
+    </div>`:''}
+  </div>`;
+}
+
+function renderLearn(){
+  const wrap = document.getElementById('learn-sections');
+  if(!wrap) return;
+  wrap.innerHTML = LEARN_STAGES.map(sec=>{
+    const open = window.__learnOpenSections.has(sec.n);
+    return `<div class="pm-section${open?' open':''}" id="learnsec-${sec.n}">
+      <div class="pm-section-head" onclick="toggleLearnSection(${sec.n})">
+        <span class="pm-section-num">${sec.n}</span>
+        <span class="pm-section-title">${sec.title}</span>
+        <span class="pm-section-count">${sec.items.length} step${sec.items.length===1?'':'s'}</span>
+        <span class="pm-section-caret">▶</span>
+      </div>
+      <div class="pm-section-body">
+        <div class="callout" style="margin:12px 16px;">${sec.tip}</div>
+        ${sec.items.map(learnItemRow).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  learnUpdateProgress();
+}
+
+function learnUpdateProgress(){
+  const state = learnLoadState();
+  let total=0, done=0;
+  LEARN_STAGES.forEach(sec=>sec.items.forEach(it=>{ total++; if(state[it.id]) done++; }));
+  const label = document.getElementById('learn-progress-label');
+  const fill = document.getElementById('learn-progress-fill');
+  if(label) label.textContent = `${done} / ${total} complete`;
+  if(fill) fill.style.width = total? `${Math.round(done/total*100)}%` : '0%';
+}
+
+function toggleLearnCheck(id, evt){
+  if(evt) evt.stopPropagation();
+  const state = learnLoadState();
+  state[id] = !state[id];
+  learnSaveState(state);
+  const row = document.getElementById('learnrow-'+id);
+  if(row) row.classList.toggle('done', !!state[id]);
+  learnUpdateProgress();
+}
+function toggleLearnDetail(id){
+  if(window.__learnExpanded.has(id)) window.__learnExpanded.delete(id);
+  else window.__learnExpanded.add(id);
+  const row = document.getElementById('learnrow-'+id);
+  if(row) row.classList.toggle('expanded');
+}
+function toggleLearnSection(n){
+  if(window.__learnOpenSections.has(n)) window.__learnOpenSections.delete(n);
+  else window.__learnOpenSections.add(n);
+  const sec = document.getElementById('learnsec-'+n);
+  if(sec) sec.classList.toggle('open');
+}
+function resetLearnProgress(){
+  learnSaveState({});
+  renderLearn();
+}
+function learnContinue(){
+  const state = learnLoadState();
+  for(const sec of LEARN_STAGES){
+    const firstUndone = sec.items.find(it=>!state[it.id]);
+    if(firstUndone){
+      window.__learnOpenSections.add(sec.n);
+      renderLearn();
+      requestAnimationFrame(()=>{
+        const row = document.getElementById('learnrow-'+firstUndone.id);
+        if(row){
+          if(typeof row.scrollIntoView === 'function') row.scrollIntoView({block:'center'});
+          row.style.outline = '2px solid var(--data)';
+          setTimeout(()=>{ row.style.outline=''; }, 1600);
+        }
+      });
+      return;
+    }
+  }
+  const label = document.getElementById('learn-progress-label');
+  if(label){
+    const original = label.textContent;
+    label.textContent = 'All steps complete — nice work! Try the PM Checklist next →';
+    label.style.color = 'var(--control)';
+    setTimeout(()=>{ label.style.color=''; label.textContent = original; }, 3000);
+  }
+}
+
 function viewPM(){
   return `
   <div class="page-head">
@@ -1995,7 +2268,7 @@ function renderErrors(){
 /* =========================================================================
    APP INIT
    ========================================================================= */
-const VIEWFN = {overview:viewOverview, glossary:viewGlossary, fullflow:viewFullFlow, power:viewPower, das:viewDAS, motion:viewMotion, xray:viewXray, dataflow:viewDataFlow, mechanical:viewMechanical, maintenance:viewMaintenance, pm:viewPM, boards:viewBoards, errors:viewErrors};
+const VIEWFN = {learn:viewLearn, overview:viewOverview, glossary:viewGlossary, fullflow:viewFullFlow, power:viewPower, das:viewDAS, motion:viewMotion, xray:viewXray, dataflow:viewDataFlow, mechanical:viewMechanical, maintenance:viewMaintenance, pm:viewPM, boards:viewBoards, errors:viewErrors};
 function renderApp(){
   const main = document.getElementById('main');
   main.innerHTML = Object.keys(VIEWFN).map((id,i)=>`<section id="view-${id}" class="view${i===0?' active':''}">${VIEWFN[id]()}</section>`).join('');
@@ -2003,6 +2276,7 @@ function renderApp(){
   renderErrors();
   renderGlossary();
   renderPM();
+  renderLearn();
 }
 document.addEventListener('DOMContentLoaded', function(){
   document.body.insertAdjacentHTML('afterbegin', markerDefs());
@@ -2054,4 +2328,3 @@ function initMobileNav(){
 </script>
 </body>
 </html>
-
