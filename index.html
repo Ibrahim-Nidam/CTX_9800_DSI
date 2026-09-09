@@ -279,6 +279,30 @@ select{
 .pm-goto-btn{margin-top:8px; display:inline-block; font-size:11.5px; background:var(--panel3); border:1px solid var(--data); color:var(--data); padding:5px 11px; border-radius:6px; cursor:pointer;}
 .pm-no-detail{font-size:11.5px; color:var(--text-dim2); font-style:italic;}
 
+#img-lightbox{
+  display:none; position:fixed; inset:0; z-index:95;
+  background:rgba(6,8,11,0.94);
+  align-items:center; justify-content:center;
+  overflow:auto; padding:16px; box-sizing:border-box;
+}
+#img-lightbox.show{display:flex;}
+#img-lightbox img{
+  max-width:100%; max-height:100%; object-fit:contain;
+  cursor:zoom-in; border-radius:6px; margin:auto; display:block;
+}
+#img-lightbox img.zoomed{
+  max-width:none; max-height:none; width:auto; height:auto; cursor:zoom-out;
+}
+.lightbox-close{
+  position:fixed; top:14px; right:14px; z-index:96;
+  width:38px; height:38px; border-radius:9px; background:var(--panel2); border:1px solid var(--border2);
+  color:var(--text); font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+}
+.lightbox-hint{
+  position:fixed; bottom:14px; left:0; right:0; text-align:center;
+  color:var(--text-dim2); font-size:11px; pointer-events:none;
+}
+
 #hover-tip{
   position:fixed; z-index:80; pointer-events:none; display:none;
   background:var(--panel3); border:1px solid var(--border2); border-radius:9px;
@@ -363,6 +387,11 @@ table.errtab tr:hover td{background:var(--panel2);}
 </div>
 
 <div id="overlay"><div id="drawer"></div></div>
+<div id="img-lightbox">
+  <div class="lightbox-close" onclick="closeImageZoom()">×</div>
+  <img id="img-lightbox-img" src="" alt="" onclick="event.stopPropagation();this.classList.toggle('zoomed')">
+  <div class="lightbox-hint">Tap image to zoom in/out · tap outside to close</div>
+</div>
 <div id="hover-tip"></div>
 
 <script>
@@ -1098,21 +1127,67 @@ function buildNav(){
     </div>`).join('');
 }
 
-function selectView(id){
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.view===id));
-  document.querySelectorAll('section.view').forEach(s=>s.classList.toggle('active', s.id==='view-'+id));
-  document.getElementById('main').scrollTop = 0;
-  window.scrollTo(0,0);
+/* =========================================================================
+   NAVIGATION STATE — single source of truth, synced with browser history
+   so the back button steps through view/drawer/zoom instead of exiting.
+   Some hosting contexts (e.g. a sandboxed srcdoc preview) forbid the
+   History API entirely (SecurityError) — __historyOK detects that on the
+   very first attempt and everything falls back to direct state changes
+   with no back-button integration, rather than crashing.
+   ========================================================================= */
+window.__navState = {view:'learn', drawer:null, zoom:null};
+window.__historyOK = true;
+
+function safePushState(state, url){
+  if(!window.__historyOK) return;
+  try{ history.pushState(state, '', url); }
+  catch(e){ window.__historyOK = false; }
+}
+function safeReplaceState(state, url){
+  if(!window.__historyOK) return;
+  try{ history.replaceState(state, '', url); }
+  catch(e){ window.__historyOK = false; }
+}
+
+function applyNavState(state, push){
+  window.__navState = state;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.view===state.view));
+  document.querySelectorAll('section.view').forEach(s=>s.classList.toggle('active', s.id==='view-'+state.view));
+
+  const overlay = document.getElementById('overlay');
+  if(state.drawer){
+    const b = BOARDS.find(x=>x.id===state.drawer);
+    if(b){ renderDrawerContent(b); overlay.classList.add('show'); }
+    else overlay.classList.remove('show');
+  } else {
+    overlay.classList.remove('show');
+  }
+
+  const lightbox = document.getElementById('img-lightbox');
+  if(state.zoom && IMAGES[state.zoom]){
+    renderZoomContent(state.zoom);
+    lightbox.classList.add('show');
+  } else {
+    lightbox.classList.remove('show');
+  }
+
   const sidebar = document.getElementById('sidebar');
   const scrim = document.getElementById('nav-scrim');
   if(sidebar) sidebar.classList.remove('open');
   if(scrim) scrim.classList.remove('show');
+
+  if(push) safePushState(state, '#'+state.view);
+}
+
+function selectView(id){
+  if(window.__navState.view===id && !window.__navState.drawer && !window.__navState.zoom) return;
+  applyNavState({view:id, drawer:null, zoom:null}, true);
+  document.getElementById('main').scrollTop = 0;
+  window.scrollTo(0,0);
 }
 
 function goBoard(id){
-  selectView('boards');
-  renderBoards();
-  requestAnimationFrame(()=>openDrawer(id));
+  openDrawer(id);
 }
 function goErrors(sysTag){
   selectView('errors');
@@ -1647,7 +1722,7 @@ function viewDataFlow(){
   </div>
   <div class="card" style="margin-top:14px;">
     <div style="font-weight:600;margin-bottom:8px;">Full internal hosts file</div>
-    <img src="data:image/jpeg;base64,${IMAGES.hosts_file}" style="width:100%;max-width:520px;border-radius:8px;border:1px solid var(--border2);display:block;">
+    <img src="data:image/jpeg;base64,${IMAGES.hosts_file}" style="width:100%;max-width:520px;border-radius:8px;border:1px solid var(--border2);display:block;cursor:zoom-in;" onclick="openImageZoom('hosts_file')">
   </div>`;
 }
 
@@ -1683,13 +1758,13 @@ function viewMechanical(){
 
   <h2 class="sec" style="margin-top:30px;"><span class="bar" style="background:var(--mechc)"></span>Whole-machine reference</h2>
   <div class="card">
-    <img src="data:image/jpeg;base64,${IMAGES.whole_machine}" style="width:100%;max-width:560px;border-radius:8px;border:1px solid var(--border2);display:block;margin:0 auto;">
+    <img src="data:image/jpeg;base64,${IMAGES.whole_machine}" style="width:100%;max-width:560px;border-radius:8px;border:1px solid var(--border2);display:block;margin:0 auto;cursor:zoom-in;" onclick="openImageZoom('whole_machine')">
   </div>`;
 }
 function mechCard(id){
   const b = BOARDS.find(x=>x.id===id);
   if(!b) return '';
-  const thumb = b.photo && IMAGES[b.photo] ? `<img class="board-thumb" src="data:image/jpeg;base64,${IMAGES[b.photo]}" alt="${b.name}">` : '';
+  const thumb = b.photo && IMAGES[b.photo] ? `<img class="board-thumb" src="data:image/jpeg;base64,${IMAGES[b.photo]}" alt="${b.name}" style="cursor:zoom-in;" onclick="event.stopPropagation();openImageZoom('${b.photo}')">` : '';
   return `<div class="board-card" onclick="openDrawer('${id}')">
     ${thumb}
     <div class="board-top"><div><div class="board-name">${b.name}</div><div class="board-pn">${b.pn}</div></div></div>
@@ -2149,7 +2224,7 @@ function renderBoards(){
     return (b.name+' '+b.pn+' '+b.fn).toLowerCase().includes(q);
   });
   grid.innerHTML = list.map(b=>{
-    const thumb = b.photo && IMAGES[b.photo] ? `<img class="board-thumb" src="data:image/jpeg;base64,${IMAGES[b.photo]}" alt="${b.name}">` : '';
+    const thumb = b.photo && IMAGES[b.photo] ? `<img class="board-thumb" src="data:image/jpeg;base64,${IMAGES[b.photo]}" alt="${b.name}" style="cursor:zoom-in;" onclick="event.stopPropagation();openImageZoom('${b.photo}')">` : '';
     return `
     <div class="board-card" onclick="openDrawer('${b.id}')">
       ${thumb}
@@ -2168,10 +2243,8 @@ function renderBoards(){
 /* =========================================================================
    DRAWER (board detail)
    ========================================================================= */
-function openDrawer(id){
-  const b = BOARDS.find(x=>x.id===id);
-  if(!b) return;
-  const photoHtml = b.photo && IMAGES[b.photo] ? `<img src="data:image/jpeg;base64,${IMAGES[b.photo]}" alt="${b.name}" style="width:100%;border-radius:9px;border:1px solid var(--border2);margin-bottom:14px;display:block;">` : '';
+function renderDrawerContent(b){
+  const photoHtml = b.photo && IMAGES[b.photo] ? `<img src="data:image/jpeg;base64,${IMAGES[b.photo]}" alt="${b.name}" style="width:100%;border-radius:9px;border:1px solid var(--border2);margin-bottom:14px;display:block;cursor:zoom-in;" onclick="event.stopPropagation();openImageZoom('${b.photo}')">` : '';
   document.getElementById('drawer').innerHTML = `
     <div class="close" onclick="closeDrawer()">×</div>
     <span class="tag"><span class="d" style="background:var(--${CATCOLOR[b.cat]})"></span>${CATLABEL[b.cat]}</span>
@@ -2191,11 +2264,31 @@ function openDrawer(id){
       </div>
     </div>
   `;
-  document.getElementById('overlay').classList.add('show');
 }
-function closeDrawer(){ document.getElementById('overlay').classList.remove('show'); }
+function openDrawer(id){
+  const b = BOARDS.find(x=>x.id===id);
+  if(!b) return;
+  applyNavState({...window.__navState, drawer:id, zoom:null}, true);
+}
+function closeDrawer(){
+  if(!window.__navState.drawer) return;
+  if(window.__historyOK) history.back();
+  else applyNavState({...window.__navState, drawer:null}, false);
+}
+function renderZoomContent(key){
+  const img = document.getElementById('img-lightbox-img');
+  if(img){ img.src = 'data:image/jpeg;base64,'+IMAGES[key]; img.classList.remove('zoomed'); }
+}
+function openImageZoom(key){
+  if(!IMAGES[key]) return;
+  applyNavState({...window.__navState, zoom:key}, true);
+}
+function closeImageZoom(){
+  if(!window.__navState.zoom) return;
+  if(window.__historyOK) history.back();
+  else applyNavState({...window.__navState, zoom:null}, false);
+}
 function goErrorsFromDrawer(boardId){
-  closeDrawer();
   const b = BOARDS.find(x=>x.id===boardId);
   const name = b ? b.name : '';
   let sys='ALL', term='';
@@ -2206,9 +2299,9 @@ function goErrorsFromDrawer(boardId){
   else if(boardId==='pdp-control'||boardId==='adam'||boardId==='bhs-interface'){ sys='SAFETY'; }
   else if(boardId==='dma'||boardId==='ad-board'){ sys='DAS'; term='bad'; }
   window.__errFilter = sys;
+  selectView('errors');
   const box = document.getElementById('err-search');
   if(box){ box.value = term; }
-  selectView('errors');
   renderErrors();
   const cnt = document.getElementById('err-count');
   if(cnt && typeof cnt.scrollIntoView === 'function') cnt.scrollIntoView({block:'start'});
@@ -2282,8 +2375,18 @@ document.addEventListener('DOMContentLoaded', function(){
   document.body.insertAdjacentHTML('afterbegin', markerDefs());
   buildNav();
   renderApp();
-  selectView('overview');
+
+  const initialState = {view:'learn', drawer:null, zoom:null};
+  safeReplaceState(initialState, '#learn');
+  applyNavState(initialState, false);
+
   document.getElementById('overlay').addEventListener('click', function(e){ if(e.target.id==='overlay') closeDrawer(); });
+  document.getElementById('img-lightbox').addEventListener('click', function(e){ if(e.target.id==='img-lightbox') closeImageZoom(); });
+  window.addEventListener('popstate', function(e){
+    const state = e.state || {view:'learn', drawer:null, zoom:null};
+    applyNavState(state, false);
+  });
+
   initHoverTips();
   initMobileNav();
 });
