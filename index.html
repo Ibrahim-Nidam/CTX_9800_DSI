@@ -345,6 +345,7 @@ table.errtab tr:hover td{background:var(--panel2);}
   padding:10px 14px; font-size:12.5px; color:var(--text-dim); margin:14px 0;
 }
 .callout.safety{border-color:var(--safety);}
+.callout.schem{border-color:var(--xray);}
 .callout strong{color:var(--text); font-weight:600;}
 
 .stat-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;}
@@ -362,6 +363,132 @@ table.errtab tr:hover td{background:var(--panel2);}
 ::-webkit-scrollbar{width:9px; height:9px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2); border-radius:6px;}
+
+/* =========================================================================
+   WIRING SCHEMATICS LIBRARY — grid cards + full-screen zoom/pan viewer
+   ========================================================================= */
+.sch-card{
+  background:var(--panel); border:1px solid var(--border); border-radius:10px;
+  overflow:hidden; cursor:pointer; transition:border-color .15s;
+}
+.sch-card:hover{border-color:var(--border2);}
+.sch-thumb-wrap{position:relative; background:#fff; height:132px; overflow:hidden;}
+.sch-thumb-wrap img{width:100%; height:100%; object-fit:cover; object-position:top;}
+.sch-sheetcnt{
+  position:absolute; right:6px; bottom:6px; background:rgba(6,8,11,0.72); color:#fff;
+  font-family:var(--mono); font-size:10px; padding:2px 7px; border-radius:20px;
+}
+.sch-gen{
+  position:absolute; left:6px; top:6px; font-family:var(--mono); font-size:9.5px;
+  padding:2px 7px; border-radius:20px; color:#0c0f13; font-weight:700; letter-spacing:.02em;
+  background:var(--data);
+}
+.sch-gen.legacy{background:var(--mechc);}
+.sch-gen.eclipse{background:var(--xray);}
+.sch-gen.lenze{background:var(--control);}
+.sch-gen.emerson{background:var(--power);}
+.sch-body{padding:12px 14px;}
+.sch-name{font-weight:600; font-size:13px; line-height:1.3;}
+.sch-doc{font-family:var(--mono); font-size:10.5px; color:var(--text-dim2); margin-top:3px;}
+.sch-sum{font-size:11.5px; color:var(--text-dim); margin-top:6px; line-height:1.45;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+
+/* full-screen viewer */
+#schem-viewer{
+  display:none; position:fixed; inset:0; z-index:97; background:var(--bg);
+  flex-direction:column;
+}
+#schem-viewer.show{display:flex;}
+.sv-header{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:10px 14px; border-bottom:1px solid var(--border2); background:var(--panel);
+  flex:0 0 auto;
+}
+.sv-eyebrow{font-family:var(--mono); font-size:10px; color:var(--text-dim2); letter-spacing:.05em; display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+.sv-title{font-size:15px; font-weight:600; margin-top:2px; line-height:1.25;}
+.sv-actions{display:flex; gap:8px; flex:0 0 auto;}
+.sv-icon-btn{
+  width:34px; height:34px; border-radius:8px; background:var(--panel2); border:1px solid var(--border2);
+  color:var(--text); font-size:16px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+}
+.sv-icon-btn.on{border-color:var(--data); box-shadow:0 0 0 1px var(--data) inset; color:var(--data);}
+.sv-tabs{
+  display:flex; gap:6px; padding:8px 14px; overflow-x:auto; background:var(--panel);
+  border-bottom:1px solid var(--border2); flex:0 0 auto;
+}
+.sv-tab{
+  flex:0 0 auto; background:var(--panel2); border:1px solid var(--border2); color:var(--text-dim);
+  padding:6px 12px; border-radius:8px; font-size:11.5px; cursor:pointer; white-space:nowrap; max-width:220px;
+  overflow:hidden; text-overflow:ellipsis;
+}
+.sv-tab.on{background:var(--panel3); color:var(--text); border-color:var(--xray); box-shadow:0 0 0 1px var(--xray) inset;}
+.sv-body{flex:1 1 auto; position:relative; display:flex; overflow:hidden; min-height:0;}
+.sv-stage{
+  flex:1 1 auto; position:relative; overflow:hidden; background:#e9ebee;
+  touch-action:none; cursor:grab;
+}
+.sv-stage.grabbing{cursor:grabbing;}
+.sv-stage-inner{position:absolute; left:0; top:0; transform-origin:0 0; will-change:transform;}
+.sv-stage-inner img{display:block; max-width:none; user-select:none; -webkit-user-drag:none; pointer-events:none;}
+.sv-zoom-controls{
+  position:absolute; right:12px; bottom:12px; display:flex; flex-direction:column; gap:6px; z-index:2;
+}
+.sv-zoom-controls button{
+  width:38px; height:38px; border-radius:9px; border:1px solid var(--border2); background:rgba(23,29,38,0.92);
+  color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+.sv-zoom-pct{
+  font-family:var(--mono); font-size:10px; text-align:center; color:var(--text-dim);
+  background:rgba(23,29,38,0.92); border:1px solid var(--border2); border-radius:9px; padding:3px 0;
+}
+.sv-fit-btn{font-size:10px !important; font-family:var(--mono);}
+.sv-hint{
+  position:absolute; left:0; right:0; top:10px; text-align:center; pointer-events:none;
+  color:var(--text-dim2); font-size:11px; z-index:2;
+}
+.sv-hint span{background:rgba(23,29,38,0.85); padding:4px 10px; border-radius:20px; border:1px solid var(--border2);}
+
+.sv-info{
+  flex:0 0 auto; width:380px; max-width:40vw; background:var(--panel);
+  border-left:1px solid var(--border2); display:flex; flex-direction:column; min-height:0;
+}
+.sv-info-scroll{overflow-y:auto; padding:18px 20px 40px 20px; flex:1 1 auto; min-height:0;}
+.sv-info-handle{display:none;}
+.sv-info-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim2); font-weight:600; margin:16px 0 6px 0;}
+.sv-info-label:first-child{margin-top:0;}
+.sv-info p{font-size:13px; color:var(--text-dim); line-height:1.5; margin:0;}
+.sv-info ul{margin:0; padding-left:18px;}
+.sv-info li{font-size:12.5px; color:var(--text-dim); margin-bottom:7px; line-height:1.45;}
+.sv-rel-row{display:flex; flex-wrap:wrap; gap:7px;}
+.rel-chip{
+  display:inline-flex; align-items:center; gap:5px; background:var(--panel2); border:1px solid var(--border2);
+  color:var(--text); font-size:11.5px; padding:6px 11px; border-radius:20px; cursor:pointer;
+}
+.rel-chip:hover{border-color:var(--data);}
+.rel-chip .arrow{color:var(--data);}
+
+@media (max-width:900px){
+  .sv-info{
+    position:absolute; left:0; right:0; bottom:0; width:auto; max-width:none; height:78vh;
+    border-left:none; border-top:1px solid var(--border2); border-radius:16px 16px 0 0;
+    transform:translateY(calc(100% - 46px)); transition:transform .28s cubic-bezier(.2,.8,.3,1);
+    box-shadow:0 -8px 28px rgba(0,0,0,0.45); padding-top:6px; z-index:3;
+  }
+  .sv-info.expanded{transform:translateY(0);}
+  .sv-info-handle{
+    display:flex; align-items:center; justify-content:center; height:34px; cursor:pointer; margin-bottom:4px;
+  }
+  .sv-info-handle span{width:36px; height:4px; border-radius:3px; background:var(--border2);}
+  .sv-hint{top:auto; bottom:64px;}
+  .sch-thumb-wrap{height:104px;}
+}
+@media (max-width:480px){
+  .sv-title{font-size:13.5px;}
+  .sv-eyebrow{font-size:9px;}
+  .sv-tab{font-size:10.5px; padding:5px 10px;}
+  .sv-icon-btn{width:30px; height:30px; font-size:14px;}
+}
+
 </style>
 </head>
 <body>
@@ -392,6 +519,7 @@ table.errtab tr:hover td{background:var(--panel2);}
   <img id="img-lightbox-img" src="" alt="" onclick="event.stopPropagation();this.classList.toggle('zoomed')">
   <div class="lightbox-hint">Tap image to zoom in/out · tap outside to close</div>
 </div>
+<div id="schem-viewer"></div>
 <div id="hover-tip"></div>
 
 <script>
@@ -1080,6 +1208,1194 @@ function legend(items){
     `<div class="legend-item"><span class="legend-swatch" style="background:var(--${color});${dashed?'background-image:repeating-linear-gradient(90deg,var(--'+color+') 0 4px, transparent 4px 7px);background-color:transparent;':''}"></span>${label}</div>`
   ).join('')}</div>`;
 }
+function schemLinkRow(ids, label){
+  const chips = ids.map(id=>{
+    const d = SCHEMATICS.find(x=>x.id===id);
+    return d ? `<div class="rel-chip" onclick="openSchematic('${id}')"><span class="arrow">▤</span>${d.title}</div>` : '';
+  }).join('');
+  if(!chips) return '';
+  return `<div class="callout schem">
+    <div style="margin-bottom:8px;">📐 <strong>${label||'Original wiring schematics for this section'}</strong> — full connector/reference-designator detail, zoomable:</div>
+    <div class="sv-rel-row">${chips}</div>
+  </div>`;
+}
+
+/* =========================================================================
+   WIRING SCHEMATICS LIBRARY — extracted from Smiths Detection CTX 9800
+   Roadrunner & SEIO "Diagrams & Schematics" training books (2018)
+   ========================================================================= */
+const SCHEMATICS = [
+ {
+  "id": "sys-block-diagram",
+  "title": "System Block Diagram \u2014 CTX 9800 SEIO",
+  "cat": "overview",
+  "doc": "607656-1",
+  "gen": null,
+  "summary": "The top-level map of the whole machine: how the Input, Scanner and Output modules, the Power Distribution Panel, LV Assy and the gantry all connect. Start here before opening any other schematic.",
+  "focus": [
+   "Three physical modules (Input / Scanner / Output) are outlined in blue \u2014 every other schematic in this library is a close-up of something inside one of these boxes.",
+   "Sheet 2 isolates just the gantry: slip rings, PDB-DAS1/2, PDB-AUX, the two Global Backplanes and the HVPS/X-ray tube \u2014 this is the legacy GBP/DMA detector generation (see the Eclipse Production DAS diagrams for the newer gantry electronics).",
+   "Sheet 3 redraws the whole system as it's wired for a single-computer (no separate Recon PC) configuration \u2014 check which one matches the unit in front of you.",
+   "Yellow boxes throughout are power supplies/converters; green boxes are network/PLC equipment \u2014 the same colour key is reused on every other block diagram in this library."
+  ],
+  "inputs": [
+   "380\u2013480 VAC 3-phase site power (bottom of sheet 1)",
+   "Airport BHS Ethernet interface (top)",
+   "Operator inputs at FSE Workstation / remote console"
+  ],
+  "outputs": [
+   "330 VDC gantry bus to the Power Distribution Panel",
+   "24 VDC control/signal power to all three modules",
+   "Reconstructed bag images to the airport network"
+  ],
+  "related": [
+   {
+    "type": "view",
+    "id": "overview",
+    "label": "Overview flow"
+   },
+   {
+    "type": "view",
+    "id": "power",
+    "label": "Power & Distribution flow"
+   },
+   {
+    "type": "board",
+    "id": "host-computer",
+    "label": "Host Computer"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "Full System \u2014 All Modules",
+    "img": "assets/schematics/sys-block-diagram/sheet-1.jpg",
+    "thumb": "assets/schematics/sys-block-diagram/thumb-1.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "Gantry Section (legacy GBP/DMA)",
+    "img": "assets/schematics/sys-block-diagram/sheet-2.jpg",
+    "thumb": "assets/schematics/sys-block-diagram/thumb-2.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "Single-Computer Configuration",
+    "img": "assets/schematics/sys-block-diagram/sheet-3.jpg",
+    "thumb": "assets/schematics/sys-block-diagram/thumb-3.jpg",
+    "w": 5883,
+    "h": 3779
+   }
+  ]
+ },
+ {
+  "id": "eclipse-network",
+  "title": "Eclipse Production DAS \u2014 Network Architecture",
+  "cat": "das",
+  "doc": "(no doc #, training excerpt)",
+  "gen": "eclipse",
+  "summary": "Three near-identical drafts of the same network map for the newer 'Eclipse Production' gantry electronics (ORC / GTB / Goblin / DMD boards, Node & DAS network switches) \u2014 this is a different, newer detector generation from the GBP/DMA machines the rest of this app's Board Library describes.",
+  "focus": [
+   "Compare this to the 'System Block Diagram' \u2014 the Input/Scanner/Output module boxes are identical, but everything inside the Scanner Module's gantry electronics is completely different hardware.",
+   "Sheet 3 carries a handwritten field note: 'DC Supply has no Ethernet \u2014 originally connected to port 6' \u2014 a useful as-built correction if you're tracing this network on a real machine.",
+   "Look for ORC, GTB, DAS Network Switch and Node Network Switch \u2014 none of these exist on a legacy GBP/DMA machine; if you see them on the unit in front of you, use this diagram family (and the Gantry Interconnect below) instead of the Global Backplane schematics."
+  ],
+  "inputs": [
+   "380\u2013480 VAC 3-phase site input",
+   "Airport BHS Ethernet interface",
+   "Muxed components (fiber, short/long distance uplink)"
+  ],
+  "outputs": [
+   "Reconstructed image data to Host Computer",
+   "24 VDC/48 VDC distributed rails to gantry nodes"
+  ],
+  "related": [
+   {
+    "type": "schematic",
+    "id": "gantry-interconnect-eclipse",
+    "label": "Gantry Interconnect (Eclipse)"
+   },
+   {
+    "type": "view",
+    "id": "das",
+    "label": "DAS & Imaging flow (legacy)"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "Stationary Section",
+    "img": "assets/schematics/eclipse-network/sheet-1.jpg",
+    "thumb": "assets/schematics/eclipse-network/thumb-1.jpg",
+    "w": 3147,
+    "h": 2003
+   },
+   {
+    "label": "Power Distribution View",
+    "img": "assets/schematics/eclipse-network/sheet-2.jpg",
+    "thumb": "assets/schematics/eclipse-network/thumb-2.jpg",
+    "w": 3147,
+    "h": 2003
+   },
+   {
+    "label": "Stationary \u2014 Ethernet / Fiber / USB (annotated)",
+    "img": "assets/schematics/eclipse-network/sheet-3.jpg",
+    "thumb": "assets/schematics/eclipse-network/thumb-3.jpg",
+    "w": 3147,
+    "h": 2003
+   }
+  ]
+ },
+ {
+  "id": "gantry-interconnect-eclipse",
+  "title": "Gantry Interconnect \u2014 Eclipse Production Architecture",
+  "cat": "das",
+  "doc": "1000844-01 (Sheets 1\u20132 of 7)",
+  "gen": "eclipse",
+  "summary": "The full colour-coded gantry wiring diagram for the newer 'Eclipse Production' DAS: Gantry Power Supply (GPS), HVPS/X-ray tube, 4x Goblin boards, 4x DMD (Detector Module Dispatch) boards feeding 21 EDMs, plus the DAS/Node network switches and slip-ring path back to the stationary side.",
+  "focus": [
+   "PS1\u2013PS4 (parallel, 12 V) and PS5\u2013PS7 (single, 24/48 V) feed the Gantry Power Supply (GPS 1000300-1), which distributes 12 V/24 V/48 V through PDB98 to the ORC, GTB, iUFO, DMD1-4 and Goblin1-4.",
+   "Each DMD fans out to a handful of EDMs (Elementary Detector Modules) \u2014 21 in total across DMD1\u20134, mirroring the 21-slot detector count used in the legacy DMA generation.",
+   "The HVPS (605557-6) and X-ray tube sit top-right, fed from the PDB-HX4 board with an interlock signal ('HVIS PWR INTLNK') gating high voltage.",
+   "Sheet 2 (Stationary Section) shows the slip-ring path: iUFO/uplink shelf, transceiver and the host computer's uplink receiver, connected over dual 2.5 Gbps optical channels through the slip-ring assembly (608560-1)."
+  ],
+  "inputs": [
+   "24 VDC / 48 VDC gantry power rails from GPS",
+   "330 VDC bus from Power Distribution Panel (via slip rings)",
+   "Optical uplink/downlink through the slip-ring assembly"
+  ],
+  "outputs": [
+   "High voltage to the X-ray tube (via HVPS/HVIC)",
+   "Detector data from 21 EDMs \u2192 DMD \u2192 DAS Network Switch \u2192 Host Computer",
+   "Coolant loop status via Heat Exchanger"
+  ],
+  "related": [
+   {
+    "type": "schematic",
+    "id": "eclipse-network",
+    "label": "Eclipse Network Architecture"
+   },
+   {
+    "type": "board",
+    "id": "gps",
+    "label": "Gantry Power Supply (GPS)"
+   },
+   {
+    "type": "board",
+    "id": "hvps",
+    "label": "HVPS"
+   },
+   {
+    "type": "view",
+    "id": "xray",
+    "label": "X-Ray / HVPS flow"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "Gantry Section (Sheet 1 of 7)",
+    "img": "assets/schematics/gantry-interconnect-eclipse/sheet-1.jpg",
+    "thumb": "assets/schematics/gantry-interconnect-eclipse/thumb-1.jpg",
+    "w": 3402,
+    "h": 2202
+   },
+   {
+    "label": "Stationary Section (Sheet 2 of 7)",
+    "img": "assets/schematics/gantry-interconnect-eclipse/sheet-2.jpg",
+    "thumb": "assets/schematics/gantry-interconnect-eclipse/thumb-2.jpg",
+    "w": 3402,
+    "h": 2202
+   }
+  ]
+ },
+ {
+  "id": "seio-network-gantry",
+  "title": "SEIO Network \u2014 Gantry Section (Legacy DAS Cabling)",
+  "cat": "das",
+  "doc": "(training excerpt, no doc #)",
+  "gen": "legacy",
+  "summary": "Cable-and-media map for the legacy GBP/DMA gantry \u2014 which physical link (Ethernet, LC fiber, SDS bus, CAT6) connects the slip rings, PDB-DAS1/DAS2/AUX2, Global Backplanes, HVPS and transmitter.",
+  "focus": [
+   "This is the cabling counterpart to the 'Global Backplane' schematics \u2014 use it to find which physical cable/connector to check before diving into a backplane's internal circuitry.",
+   "Colour key (top-left of the parent 'SEIO Network' sheet) distinguishes Ethernet cable, LC fiber, SDS bus and CAT6 \u2014 trace by wire colour, not just by box name.",
+   "PDB-DAS1 and PDB-DAS2 each power one Global Backplane (GBP-1 feeds DMA 1-10, GBP-2 feeds DMA 11-21) \u2014 this diagram shows exactly where their 48 VDC feed originates."
+  ],
+  "inputs": [
+   "48 VDC from Gantry Power Module",
+   "Fiber uplink/downlink through slip rings"
+  ],
+  "outputs": [
+   "Regulated \u00b13.3 VDC to Global Backplanes 1 & 2",
+   "DIFB trigger/clock signals distributed to all 21 DMAs"
+  ],
+  "related": [
+   {
+    "type": "schematic",
+    "id": "gbp1-schematic",
+    "label": "Global Backplane 1"
+   },
+   {
+    "type": "schematic",
+    "id": "gbp2-schematic",
+    "label": "Global Backplane 2"
+   },
+   {
+    "type": "board",
+    "id": "slipring",
+    "label": "Slip Rings & Brush Block"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "Gantry Cabling & Media Map",
+    "img": "assets/schematics/seio-network-gantry/sheet-1.jpg",
+    "thumb": "assets/schematics/seio-network-gantry/thumb-1.jpg",
+    "w": 3403,
+    "h": 2203
+   }
+  ]
+ },
+ {
+  "id": "seio-network",
+  "title": "SEIO Network \u2014 Full Cabling Diagram",
+  "cat": "compute",
+  "doc": "(training excerpt, no doc #)",
+  "gen": null,
+  "summary": "Stationary-side cable map: FSE Workstation, host/recon computers, the 24-port Ethernet switch, PLC panel, brush block, motion panel and the LV Assy (UPS/DC supply), each link labelled with its cable type.",
+  "focus": [
+   "The Ethernet switch's internal port map is spelled out (which port goes to host, which to PLC, ADAM modules, motion drives) \u2014 invaluable when a single device drops off the network.",
+   "Fiber (LC) runs are shown in orange, SDS bus in grey, CAT6 dashed magenta \u2014 matching the legend used across this whole network diagram family.",
+   "Continues onto a second sheet ('SEIO Network Gantry Section') at the slip-ring boundary."
+  ],
+  "inputs": [
+   "220 VAC, 1-phase to FSE Workstation and computer drawer",
+   "24 VDC control/signal distribution"
+  ],
+  "outputs": [
+   "Ethernet to BHS Airport Integration PLC",
+   "Fiber uplink across the slip ring to the gantry"
+  ],
+  "related": [
+   {
+    "type": "view",
+    "id": "dataflow",
+    "label": "Machine \u2192 Host \u2192 Server flow"
+   },
+   {
+    "type": "board",
+    "id": "host-computer",
+    "label": "Host Computer"
+   },
+   {
+    "type": "schematic",
+    "id": "seio-network-gantry",
+    "label": "Gantry Section cabling"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "Stationary Cabling Diagram",
+    "img": "assets/schematics/seio-network/sheet-1.jpg",
+    "thumb": "assets/schematics/seio-network/thumb-1.jpg",
+    "w": 3403,
+    "h": 2203
+   }
+  ]
+ },
+ {
+  "id": "pdb-hx4-schematic",
+  "title": "PDB-HX4 Schematic (Gantry Heat Exchanger / Battery Board)",
+  "cat": "das",
+  "doc": "608230-1",
+  "gen": null,
+  "summary": "Component-level schematic for the PDB-HX4 board: 48 V/24 V input filtering, the SDS bus interface (Holjeron Quad I/O modules), fan speed drivers, and the fault-latching logic that watches the heat exchanger, battery and tube-fault lines feeding the HVPS interlock.",
+  "focus": [
+   "Sheet 1: three fused input rails (48V_HX, 48V_DMA, 24 V pump) plus two Holjeron SDS-PCI-4 Quad I/O modules that put fault/status bits on the gantry SDS bus.",
+   "Sheet 2: the actual fault-detection chain \u2014 over-pressure, low-flow and over-temp switches on the heat exchanger, a battery voltage-window detector, and 4 latched fault LEDs (Tube/OP/OT/LF) that gate the relay feeding 'TO HVPS'.",
+   "If HV won't come on, this is the board to check: the fault-latch relay on sheet 2 is the last gate before the HVPS interlock input."
+  ],
+  "inputs": [
+   "48 VDC (HX + DMA rails), 24 VDC pump feed",
+   "Heat-exchanger switches: over-pressure, low-flow, over-temp",
+   "Battery pack (20 VDC, 2500 mAh) voltage sense"
+  ],
+  "outputs": [
+   "SDS bus status/fault bits (nSDS_LF/OT/TB/OP)",
+   "Fan speed control (HX, HVPS, DMA, Gantry PS fans)",
+   "Fault-gated enable relay \u2192 HVPS interlock"
+  ],
+  "related": [
+   {
+    "type": "board",
+    "id": "pdb-hx",
+    "label": "PDB-HX4 board"
+   },
+   {
+    "type": "board",
+    "id": "hvps",
+    "label": "HVPS"
+   },
+   {
+    "type": "view",
+    "id": "xray",
+    "label": "X-Ray / HVPS flow"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "Power Input, SDS Bus & Fan Drivers (Sheet 1 of 2)",
+    "img": "assets/schematics/pdb-hx4-schematic/sheet-1.jpg",
+    "thumb": "assets/schematics/pdb-hx4-schematic/thumb-1.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "Heat Exchanger, Battery & Fault Latching (Sheet 2 of 2)",
+    "img": "assets/schematics/pdb-hx4-schematic/sheet-2.jpg",
+    "thumb": "assets/schematics/pdb-hx4-schematic/thumb-2.jpg",
+    "w": 3400,
+    "h": 2200
+   }
+  ]
+ },
+ {
+  "id": "gbp1-schematic",
+  "title": "Global Backplane 1 (GBP-1) Schematic",
+  "cat": "das",
+  "doc": "605444-1",
+  "gen": "legacy",
+  "summary": "Deep PCB-level schematic for Global Backplane 1, which carries detector data, clock/trigger and power for DMA slots 1\u201310. Board-level reference \u2014 rarely needed for field troubleshooting, but the definitive source if a backplane connector or slot needs to be traced pin-for-pin.",
+  "focus": [
+   "Sheet 1 is the physical interface to Global Backplane 2 (P38A/B/C connectors) plus chassis/ground distribution \u2014 start here to understand how GBP-1 and GBP-2 are bonded together.",
+   "Sheets 3\u20134 repeat the same DMA slot circuit ten times (Slots 1\u201310) \u2014 once you understand one slot's connector/filtering pattern, the rest follow the identical layout.",
+   "Sheet 5 is the \u00b13.3 VDC power distribution section feeding PDB1-DAS outputs \u2014 check this sheet if several adjacent DMAs lose power together."
+  ],
+  "inputs": [
+   "\u00b13.3 VDC / 40A+25A from PDB-DAS1",
+   "DIFB_SDAT / DIFB_TRIG / DIFB_CLK signal buses from the DCB"
+  ],
+  "outputs": [
+   "Detector data + power to DMA slots 1\u201310",
+   "Ground/interposer bond to Global Backplane 2"
+  ],
+  "related": [
+   {
+    "type": "board",
+    "id": "gbp1",
+    "label": "GBP-1 board"
+   },
+   {
+    "type": "board",
+    "id": "dma",
+    "label": "Detector Module Assembly (DMA)"
+   },
+   {
+    "type": "schematic",
+    "id": "gbp2-schematic",
+    "label": "Global Backplane 2"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "GBP-2 Interface & Ground Distribution",
+    "img": "assets/schematics/gbp1-schematic/sheet-1.jpg",
+    "thumb": "assets/schematics/gbp1-schematic/thumb-1.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "Clock & Trigger Driver Interface",
+    "img": "assets/schematics/gbp1-schematic/sheet-2.jpg",
+    "thumb": "assets/schematics/gbp1-schematic/thumb-2.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "DMA Interface \u2014 Slots 1\u20136",
+    "img": "assets/schematics/gbp1-schematic/sheet-3.jpg",
+    "thumb": "assets/schematics/gbp1-schematic/thumb-3.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "DMA Interface \u2014 Slots 7\u201310",
+    "img": "assets/schematics/gbp1-schematic/sheet-4.jpg",
+    "thumb": "assets/schematics/gbp1-schematic/thumb-4.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "\u00b13.3 VDC Power Distribution (PDB1-DAS Outputs)",
+    "img": "assets/schematics/gbp1-schematic/sheet-5.jpg",
+    "thumb": "assets/schematics/gbp1-schematic/thumb-5.jpg",
+    "w": 3400,
+    "h": 2200
+   }
+  ]
+ },
+ {
+  "id": "gbp2-schematic",
+  "title": "Global Backplane 2 (GBP-2) Schematic",
+  "cat": "das",
+  "doc": "605449-1",
+  "gen": "legacy",
+  "summary": "The matching backplane to GBP-1, carrying DMA slots 11\u201321 plus the direct interface to the DAS Control Board (DCB). Board-level reference, same layout pattern as GBP-1.",
+  "focus": [
+   "Sheet 1 interfaces directly to the DCB (DAS Control Board) rather than to another backplane \u2014 GBP-2 is the one the DCB physically plugs into.",
+   "Sheets 3\u20134 cover DMA Slots 11\u201321 (11 slots vs. GBP-1's 10, since 21 DMAs split 10/11 across the two backplanes).",
+   "Sheet 6 ('Global Backplane 1 Interface / External Interface') is the connector pair that bonds back to GBP-1 \u2014 the counterpart to GBP-1's sheet 1."
+  ],
+  "inputs": [
+   "\u00b13.3 VDC / 40A+25A from PDB-DAS2",
+   "DIFB_SDAT / DIFB_TRIG / DIFB_CLK from the DCB"
+  ],
+  "outputs": [
+   "Detector data + power to DMA slots 11\u201321",
+   "Ground/interposer bond to Global Backplane 1"
+  ],
+  "related": [
+   {
+    "type": "board",
+    "id": "gbp2",
+    "label": "GBP-2 board"
+   },
+   {
+    "type": "board",
+    "id": "dcb",
+    "label": "DAS Control Board (DCB)"
+   },
+   {
+    "type": "schematic",
+    "id": "gbp1-schematic",
+    "label": "Global Backplane 1"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "DCB Interface & Ground Distribution",
+    "img": "assets/schematics/gbp2-schematic/sheet-1.jpg",
+    "thumb": "assets/schematics/gbp2-schematic/thumb-1.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "Clock/Trigger Driver + Diagnostic Interface",
+    "img": "assets/schematics/gbp2-schematic/sheet-2.jpg",
+    "thumb": "assets/schematics/gbp2-schematic/thumb-2.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "DMA Interface \u2014 Slots 11\u201315",
+    "img": "assets/schematics/gbp2-schematic/sheet-3.jpg",
+    "thumb": "assets/schematics/gbp2-schematic/thumb-3.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "DMA Interface \u2014 Slots 16\u201321",
+    "img": "assets/schematics/gbp2-schematic/sheet-4.jpg",
+    "thumb": "assets/schematics/gbp2-schematic/thumb-4.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "\u00b13.3 VDC Power Distribution (PDB2-DAS Outputs)",
+    "img": "assets/schematics/gbp2-schematic/sheet-5.jpg",
+    "thumb": "assets/schematics/gbp2-schematic/thumb-5.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "Global Backplane 1 Interface (External)",
+    "img": "assets/schematics/gbp2-schematic/sheet-6.jpg",
+    "thumb": "assets/schematics/gbp2-schematic/thumb-6.jpg",
+    "w": 3400,
+    "h": 2200
+   }
+  ]
+ },
+ {
+  "id": "pdb-aux2-schematic",
+  "title": "PDB-Auxiliary Board 2 (PDB-AUX2) Schematic",
+  "cat": "das",
+  "doc": "608289-1",
+  "gen": "legacy",
+  "summary": "The board that bridges the gantry optical encoder and 2.5 Gbps transmitter into the rest of the DAS, and isolates the Renishaw magnetic-encoder signal that reports gantry rotation angle.",
+  "focus": [
+   "Sheet 1: 48 V/24 V input filtering, plus CAN bus wiring out to the slip-ring pickups and the optical transmitter (2.5 Gbps dual channel).",
+   "Sheet 2: an isolated-signal circuit (ADuM opto-isolator + differential line driver) that cleans up the Renishaw magnetic encoder's Channel-B pulse before it re-enters the backplane as GantryEncChB\u00b1.",
+   "If gantry position/rotation readings look noisy or drop out, this isolator circuit is the first thing worth checking."
+  ],
+  "inputs": [
+   "24 VDC / 48 VDC from GPS",
+   "Renishaw magnetic encoder signal (Channel B, single-ended)"
+  ],
+  "outputs": [
+   "Filtered 24 V to transmitter (2.5 Gbps optical)",
+   "Isolated differential GantryEncChB+/- back to the backplane"
+  ],
+  "related": [
+   {
+    "type": "board",
+    "id": "pdb-aux",
+    "label": "PDB-AUX / AUX2 board"
+   },
+   {
+    "type": "board",
+    "id": "gantry-encoder",
+    "label": "Gantry Encoder"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "Transmitter, Power & Slip-Ring Interface (Sheet 1)",
+    "img": "assets/schematics/pdb-aux2-schematic/sheet-1.jpg",
+    "thumb": "assets/schematics/pdb-aux2-schematic/thumb-1.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "Isolated Magnetic Encoder Signal (Sheet 2)",
+    "img": "assets/schematics/pdb-aux2-schematic/sheet-2.jpg",
+    "thumb": "assets/schematics/pdb-aux2-schematic/thumb-2.jpg",
+    "w": 3400,
+    "h": 2200
+   }
+  ]
+ },
+ {
+  "id": "main-power-block",
+  "title": "Main Power Block Diagram",
+  "cat": "power",
+  "doc": "608578-1",
+  "gen": null,
+  "summary": "The single sheet that shows how site 3-phase power gets from the wall to the machine: EMI filter \u2192 15 kVA autotransformer \u2192 UPS and DC power supply, with every breaker and wire gauge labelled.",
+  "focus": [
+   "The 15 kVA autotransformer (QT&E 9098-400) can be tapped for 480V, 415V or 380V input and always outputs a clean 400 VAC, 3-phase \u2014 check the H1\u2013H9 tap wiring here if the site voltage doesn't match 480 VAC.",
+   "CB1 (35A main), CB2 (16A, HVAC), CB3 (30A, autotransformer primary), CB4/CB5 (16A, DC supply/UPS) \u2014 this is the fastest reference for 'which breaker feeds what' on the main power panel.",
+   "A CB1 auxiliary contact (DPDT) reports main-breaker status back to the REPO/ROO port and to the UPS control terminal block \u2014 useful when troubleshooting a 'main power not sensed' fault."
+  ],
+  "inputs": [
+   "380\u2013480 VAC 3-phase site power",
+   "REPO/ROO remote shutdown signal path"
+  ],
+  "outputs": [
+   "400 VAC 3-phase to the DC Power Supply",
+   "400 VAC 3-phase to the UPS",
+   "480 VAC to the HVAC unit"
+  ],
+  "related": [
+   {
+    "type": "board",
+    "id": "autotransformer",
+    "label": "Autotransformer"
+   },
+   {
+    "type": "board",
+    "id": "ups",
+    "label": "UPS"
+   },
+   {
+    "type": "view",
+    "id": "power",
+    "label": "Power & Distribution flow"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "Autotransformer, UPS & DC Supply Wiring",
+    "img": "assets/schematics/main-power-block/sheet-1.jpg",
+    "thumb": "assets/schematics/main-power-block/thumb-1.jpg",
+    "w": 3400,
+    "h": 2200
+   }
+  ]
+ },
+ {
+  "id": "pdp-interconnect",
+  "title": "Power Distribution Panel \u2014 Interconnect Diagram",
+  "cat": "power",
+  "doc": "608096-1",
+  "gen": null,
+  "summary": "The wiring-level (connector-and-terminal) view of the Power Distribution Panel: where to physically probe the E-Stop loops, start/disable relay logic and the CTX module door interlock \u2014 as opposed to the component-level PWA schematic below.",
+  "focus": [
+   "Sheet 1: three ADAM-6050 I/O modules (E1/E2/E3) map every digital input/output the panel exposes \u2014 cross-reference the 1IN0\u20263IN11 / 1OUT0\u20262OUT4 labels here against the relay ladder on sheet 2.",
+   "Sheet 2 is the relay ladder logic: E-Stop loop, Start-Restart loop, Disable loop and the contactor-enable circuits for gantry drive, gantry DC power, and the internal/external conveyors \u2014 this is what actually closes K1\u2013K23.",
+   "Sheet 3, the CTX Module Door Interlock, controls the solenoid latches on the scanner's Door A/B \u2014 'Keys need to be inserted completely in order to latch' is called out directly on the diagram."
+  ],
+  "inputs": [
+   "24 VDC control power (+24VF1\u2026F5 branches, each individually fused)",
+   "E-Stop pushbuttons from Remote Console, Input/Output Modules, Scanner Module (both sides)"
+  ],
+  "outputs": [
+   "Contactor enables: Gantry Drive, Gantry DC Power, Internal/External Conveyors",
+   "Door A/B solenoid lock/unlock drive"
+  ],
+  "related": [
+   {
+    "type": "schematic",
+    "id": "pdp-pwa-schematic",
+    "label": "PWA component schematic"
+   },
+   {
+    "type": "schematic",
+    "id": "system-interlock",
+    "label": "System Interlock Diagram"
+   },
+   {
+    "type": "board",
+    "id": "pdp-control",
+    "label": "PDP \u2013 Control Section"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "I/O & Power Branch Protection (Sheet 1)",
+    "img": "assets/schematics/pdp-interconnect/sheet-1.jpg",
+    "thumb": "assets/schematics/pdp-interconnect/thumb-1.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "E-Stop / Motion Relay Logic (Sheet 2)",
+    "img": "assets/schematics/pdp-interconnect/sheet-2.jpg",
+    "thumb": "assets/schematics/pdp-interconnect/thumb-2.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "CTX Module Door Interlock (Sheet 3)",
+    "img": "assets/schematics/pdp-interconnect/sheet-3.jpg",
+    "thumb": "assets/schematics/pdp-interconnect/thumb-3.jpg",
+    "w": 3400,
+    "h": 2200
+   }
+  ]
+ },
+ {
+  "id": "pdp-pwa-schematic",
+  "title": "Power Distribution Panel \u2014 PWA Schematic",
+  "cat": "power",
+  "doc": "607829-1",
+  "gen": null,
+  "summary": "Component-level circuit design of the Power Distribution board itself \u2014 the relay coil drivers and ADAM Ethernet I/O wiring behind the interconnect diagram above. Use this when a relay or driver transistor on the PCB has failed, not for field cable tracing.",
+  "focus": [
+   "Sheet 2 shows the individual relay-coil driver circuits (transistor + flyback diode per relay, K6 through K23) \u2014 match a relay's silkscreen label directly to its driver here.",
+   "Sheet 3 documents the ADAM-6050 Ethernet I/O wiring plus a full OrCAD-generated BOM document list (PWB/Gerber/Schematic/Envelope part numbers) \u2014 handy for ordering a bare replacement board.",
+   "A labelled photo of the physical relay board (K6\u2013K23) ships alongside this schematic \u2014 use it to match a relay's silkscreen designator to its physical location before pulling it."
+  ],
+  "inputs": [
+   "+24VF1\u2026F5 fused control power branches",
+   "ADAM 6050 digital I/O (24\u00d7 inputs / outputs per module)"
+  ],
+  "outputs": [
+   "Relay coil drive to K6\u2013K23",
+   "Ethernet I/O to the panel's ADAM modules"
+  ],
+  "related": [
+   {
+    "type": "schematic",
+    "id": "pdp-interconnect",
+    "label": "Interconnect diagram"
+   },
+   {
+    "type": "board",
+    "id": "pdp-control",
+    "label": "PDP \u2013 Control Section"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "Relay Driver Circuits (Sheet 2 of 3)",
+    "img": "assets/schematics/pdp-pwa-schematic/sheet-1.jpg",
+    "thumb": "assets/schematics/pdp-pwa-schematic/thumb-1.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "Ethernet I/O & BOM Document List (Sheet 3 of 3)",
+    "img": "assets/schematics/pdp-pwa-schematic/sheet-2.jpg",
+    "thumb": "assets/schematics/pdp-pwa-schematic/thumb-2.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "Relay Board \u2014 Labelled Reference Photo",
+    "img": "assets/schematics/pdp-pwa-schematic/sheet-3.jpg",
+    "thumb": "assets/schematics/pdp-pwa-schematic/thumb-3.jpg",
+    "w": 2200,
+    "h": 1700
+   }
+  ]
+ },
+ {
+  "id": "system-interlock",
+  "title": "System Interlock Diagram",
+  "cat": "safety",
+  "doc": "608130-1",
+  "gen": null,
+  "summary": "Traces the E-Stop and door-interlock loop physically around the whole machine \u2014 Remote Console, Input Module, Scanner Module, Output Module and the Power Distribution Panel \u2014 showing exactly which terminal each loop enters and leaves on.",
+  "focus": [
+   "Sheet 1 is the full-machine overview: follow the red E-STOP loop and X-RAY ON lamp wiring all the way around Input \u2192 Scanner \u2192 Output, including the Console Panel's mode switch (Standalone / Field Service / Integration).",
+   "Sheet 2 zooms into the Power Distribution Board itself: exactly which +24VF-branch and which JP1/J6 pin sources each of the E-Stop loop, Start loop and Disable loop signals.",
+   "Sheets 3\u20134 cover the Input/Output Module Interface Boxes and the Scanner Interface Box \u2014 including the airport-panel E-Stop bypass switches and the aircon remote-switch wiring \u2014 the boxes you'd actually open on-site to check a tripped loop."
+  ],
+  "inputs": [
+   "E-Stop pushbuttons (Remote Console, Input/Output Modules, Scanner Module, Airport Panel)",
+   "Door interlock switches (Left/Right, Door A/B)"
+  ],
+  "outputs": [
+   "E-Stop / Disable loop status to Power Distribution Board",
+   "X-Ray-ON and Power-ON indicator lamps at each module"
+  ],
+  "related": [
+   {
+    "type": "schematic",
+    "id": "pdp-interconnect",
+    "label": "Power Distribution Panel wiring"
+   },
+   {
+    "type": "view",
+    "id": "motion",
+    "label": "Motion & Safety Loop flow"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "System Overview",
+    "img": "assets/schematics/system-interlock/sheet-1.jpg",
+    "thumb": "assets/schematics/system-interlock/thumb-1.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "Power Distribution Board / Remote Console",
+    "img": "assets/schematics/system-interlock/sheet-2.jpg",
+    "thumb": "assets/schematics/system-interlock/thumb-2.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "Input & Output Module Interface Boxes",
+    "img": "assets/schematics/system-interlock/sheet-3.jpg",
+    "thumb": "assets/schematics/system-interlock/thumb-3.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "Scanner Interface Box / Airport Panel",
+    "img": "assets/schematics/system-interlock/sheet-4.jpg",
+    "thumb": "assets/schematics/system-interlock/thumb-4.jpg",
+    "w": 3400,
+    "h": 2200
+   }
+  ]
+ },
+ {
+  "id": "motion-panel-lenze",
+  "title": "Motion Control Panel Wiring \u2014 Lenze Drives (Original)",
+  "cat": "motion",
+  "doc": "608734-1",
+  "gen": "lenze",
+  "summary": "Panel-level wiring for the original Motion Control Panel (P/N 608140-1): two Lenze servo drives running the gantry and conveyor, wired back to the older 'PWA, Motion I/O Board' (500421-2).",
+  "focus": [
+   "Servo Drive #1 (Gantry, Lenze E94P100S2FES, 10 A) and #2 (Conveyor, Lenze E94P040S2FES, 4 A) each get 220 VAC mains through their own breaker (CB1/CB2), and drive the motor via a vendor-supplied cable.",
+   "Both drives report status back through a 50-pin SCSI cable into Control I/O Interface Ports 1 & 2 on the Motion I/O Board \u2014 that's the connector to check for a 'servo fault' with no obvious mechanical cause.",
+   "A 'Keep Alive' 24 VDC signal (J5-1/J5-2, shown in red) must be present at both drives or the panel treats them as faulted \u2014 quick sanity check before deeper diagnosis."
+  ],
+  "inputs": [
+   "220 VAC, 1-phase mains",
+   "24 VDC logic/keep-alive power from PWA 607826-1"
+  ],
+  "outputs": [
+   "3-phase motor drive to Gantry Servo Motor and Conveyor Power Roller",
+   "Belt-limit sensor signals (left/right) back to the panel"
+  ],
+  "related": [
+   {
+    "type": "schematic",
+    "id": "motion-board-lenze",
+    "label": "Motion I/O Board schematic (Lenze-era)"
+   },
+   {
+    "type": "schematic",
+    "id": "motion-panel-emerson",
+    "label": "Emerson retrofit version"
+   },
+   {
+    "type": "board",
+    "id": "servo1",
+    "label": "Servo Drive #1 (Gantry)"
+   },
+   {
+    "type": "board",
+    "id": "servo2",
+    "label": "Servo Drive #2 (Conveyor)"
+   },
+   {
+    "type": "view",
+    "id": "motion",
+    "label": "Motion & Safety Loop flow"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "Motion Control Panel Wiring, P/N 608140-1",
+    "img": "assets/schematics/motion-panel-lenze/sheet-1.jpg",
+    "thumb": "assets/schematics/motion-panel-lenze/thumb-1.jpg",
+    "w": 3400,
+    "h": 2200
+   }
+  ]
+ },
+ {
+  "id": "motion-panel-emerson",
+  "title": "Motion Control Panel Wiring \u2014 Emerson Drives (Retrofit)",
+  "cat": "motion",
+  "doc": "1004481-01",
+  "gen": "emerson",
+  "summary": "The newer Motion Control Panel (P/N 608140-3): Emerson servo drives replacing the original Lenze pair, wired to the newer 'PWA, Motion I/O Board' (1004421-01). Functionally the same job as the Lenze panel above \u2014 check which one is physically installed before troubleshooting.",
+  "focus": [
+   "Emerson Servo Drive #1 (Gantry, EP216-P00-ENR0, 16 A) and #2 (Conveyor, EP206-P00-ENR0, 12 A) \u2014 higher current ratings than the Lenze originals, one clue this is the retrofit generation.",
+   "Same 26-pin DSUB HD control-I/O cable scheme and 'Keep Alive' concept as the Lenze panel, so the fault-finding approach carries over even though the drive hardware changed.",
+   "Bag-jam and belt-limit sensors (left/right) wire into the same PWA Motion I/O Board \u2014 this is the connector set to check for conveyor-related faults regardless of drive generation."
+  ],
+  "inputs": [
+   "220 VAC, 1-phase mains",
+   "24 VDC logic/keep-alive power from PWA 607826-1"
+  ],
+  "outputs": [
+   "3-phase motor drive to Gantry Servo Motor and Conveyor Power Roller",
+   "Bag-jam (emitter/receiver) and belt-limit sensor signals"
+  ],
+  "related": [
+   {
+    "type": "schematic",
+    "id": "motion-board-emerson",
+    "label": "Motion I/O Board schematic (Emerson-era)"
+   },
+   {
+    "type": "schematic",
+    "id": "motion-panel-lenze",
+    "label": "Original Lenze version"
+   },
+   {
+    "type": "board",
+    "id": "servo1",
+    "label": "Servo Drive #1 (Gantry)"
+   },
+   {
+    "type": "board",
+    "id": "servo2",
+    "label": "Servo Drive #2 (Conveyor)"
+   },
+   {
+    "type": "view",
+    "id": "motion",
+    "label": "Motion & Safety Loop flow"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "Motion Control Panel Wiring, P/N 608140-3",
+    "img": "assets/schematics/motion-panel-emerson/sheet-1.jpg",
+    "thumb": "assets/schematics/motion-panel-emerson/thumb-1.jpg",
+    "w": 2200,
+    "h": 1700
+   }
+  ]
+ },
+ {
+  "id": "motion-board-lenze",
+  "title": "Motion I/O Board Schematic \u2014 Lenze-era",
+  "cat": "motion",
+  "doc": "500421-2",
+  "gen": "lenze",
+  "summary": "Component-level design of the original PWA Motion I/O Board (shared with the related CTX5800 platform): servo-amp power inputs, belt-limit / bag-jam sensor conditioning, and the two Controller I/O Interface Port connectors. Board-level reference.",
+  "focus": [
+   "Two Harting 26-pin connectors (CON26) \u2014 Controller I/O Interface Port 1 & 2 \u2014 are the physical link back to each servo drive; pin-for-pin signal names are all labelled (belt sensors, bag jam, faulted-drive flags).",
+   "PNP-style belt-limit sensors (SENSOR1/2) and a NPN bag-jam receiver both terminate here with LED status indicators (BELT SEN1/2, BAG JAM) \u2014 useful for confirming a sensor is actually toggling before suspecting the board."
+  ],
+  "inputs": [
+   "24 VDC servo-amp input power (aux + main)",
+   "Belt-limit sensors (PNP), bag-jam emitter/receiver (NPN)"
+  ],
+  "outputs": [
+   "Faulted-drive flags to the panel",
+   "Conditioned sensor signals to Controller I/O Interface Ports 1 & 2"
+  ],
+  "related": [
+   {
+    "type": "schematic",
+    "id": "motion-panel-lenze",
+    "label": "Motion Panel Wiring (Lenze)"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "Servo-Amp Power & Sensor Conditioning (Sheet 2)",
+    "img": "assets/schematics/motion-board-lenze/sheet-1.jpg",
+    "thumb": "assets/schematics/motion-board-lenze/thumb-1.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "I/O Connector Pinouts & BOM (Sheet 3)",
+    "img": "assets/schematics/motion-board-lenze/sheet-2.jpg",
+    "thumb": "assets/schematics/motion-board-lenze/thumb-2.jpg",
+    "w": 3400,
+    "h": 2200
+   }
+  ]
+ },
+ {
+  "id": "motion-board-emerson",
+  "title": "Motion I/O Board Schematic \u2014 Emerson-era",
+  "cat": "motion",
+  "doc": "1004419-01",
+  "gen": "emerson",
+  "summary": "Component-level design of the newer PWA Motion I/O Board (1004421-01) used with the Emerson servo retrofit: the same servo-amp/sensor conditioning role as the Lenze-era board, plus a clean encoder pinout reference sheet.",
+  "focus": [
+   "Sheet 2 mirrors the Lenze-era board's layout (servo-amp inputs, belt/bag-jam sensor conditioning, DIP-switch selectable conveyor/gantry manual-run mode) \u2014 same troubleshooting approach applies.",
+   "Sheet 3 is a clean DSUB15 pinout reference for the Gantry and Conveyor motor encoders (EP216/EP206) \u2014 print this sheet if you're building or checking an encoder extension cable."
+  ],
+  "inputs": [
+   "24 VDC servo-amp input power (aux + main)",
+   "Belt-limit sensors (PNP), bag-jam emitter/receiver (NPN)"
+  ],
+  "outputs": [
+   "Faulted-drive flags to the panel",
+   "Gantry/Conveyor motor encoder pinouts (DSUB15)"
+  ],
+  "related": [
+   {
+    "type": "schematic",
+    "id": "motion-panel-emerson",
+    "label": "Motion Panel Wiring (Emerson)"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "Servo-Amp Power & Sensor Conditioning (Sheet 2)",
+    "img": "assets/schematics/motion-board-emerson/sheet-1.jpg",
+    "thumb": "assets/schematics/motion-board-emerson/thumb-1.jpg",
+    "w": 3400,
+    "h": 2200
+   },
+   {
+    "label": "Gantry / Conveyor Encoder Pinouts (Sheet 3)",
+    "img": "assets/schematics/motion-board-emerson/sheet-2.jpg",
+    "thumb": "assets/schematics/motion-board-emerson/thumb-2.jpg",
+    "w": 3400,
+    "h": 2200
+   }
+  ]
+ },
+ {
+  "id": "bag-data-flow",
+  "title": "Computer Communication \u2014 Bag Data Flow",
+  "cat": "compute",
+  "doc": null,
+  "gen": null,
+  "summary": "A numbered, 12-step walkthrough of exactly how one bag's image gets from the X-ray scan to an operator's screen: MC \u2192 Host \u2192 Bag Library \u2192 Recon \u2192 NAS/RAIN database \u2192 TRI/PTRI displays.",
+  "focus": [
+   "Steps 1\u20134: the Motion Controller reads the BHS bag-ID, the Host writes it to the database via the 'Bag Library' (BL), Recon renders the machine decision and writes results back.",
+   "Steps 5\u20138: the inspected image is written to a NAS Set AND the Recon cache; TRI polls the database, and the BL decides whether to fetch the bag from the fast local Recon cache or the slower NAS.",
+   "The RAIN (Redundant Array of Inexpensive Nodes, 3 units) explanation box is the key to understanding the whole database layer: RAIN1 is always the active DB server, RAIN2 takes over on failover, and every image is written to 2 of the 3 NAS sets."
+  ],
+  "inputs": [
+   "IATA bag-ID packet from the BHS network",
+   "X-ray scan data from the DAS"
+  ],
+  "outputs": [
+   "Inspected bag image + operator decision, replicated across 2 of 3 RAIN NAS sets",
+   "Bag status to TRI / PTRI operator terminals"
+  ],
+  "related": [
+   {
+    "type": "view",
+    "id": "dataflow",
+    "label": "Machine \u2192 Host \u2192 Server flow"
+   },
+   {
+    "type": "schematic",
+    "id": "site-network-topology",
+    "label": "Site network topology"
+   },
+   {
+    "type": "board",
+    "id": "rain-servers",
+    "label": "RAIN Servers"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "Bag Data Flow \u2014 12 Numbered Steps",
+    "img": "assets/schematics/bag-data-flow/sheet-1.jpg",
+    "thumb": "assets/schematics/bag-data-flow/thumb-1.jpg",
+    "w": 3400,
+    "h": 2200
+   }
+  ]
+ },
+ {
+  "id": "site-network-topology",
+  "title": "Site Network Topology \u2014 Physical Rack Layout",
+  "cat": "compute",
+  "doc": null,
+  "gen": null,
+  "summary": "The physical equipment layout for a full site install: Control Interface room, Baggage Screening Room (TRI operator), Baggage Inspection Room (3x PTRI stations), the two stacked MuxSwitches, and the 3 RAIN DB servers \u2014 plus the internal VLAN port map for the CTX9800's own network switch.",
+  "focus": [
+   "The 'Internal VLAN Ports 1-18' table (bottom-right) is a direct port-to-device map for the machine's own switch \u2014 Port 1/2/3 = ADAM front/middle/back modules, Port 4/5 = Lenze gantry/conveyor drives, Port 7 = UPS, Port 9 = PLC/BHS firewall \u2014 priceless when a single device won't come up on the network.",
+   "MuxSwitch1/2 are stacked (STACK1/STACK2 ports) and carry RAIN DB-server heartbeat/replication traffic (RAIN1/2/3 eth2, eth3) separately from the operator-facing TRI/PTRI/CI traffic.",
+   "Every terminal's static IP is labelled directly on the diagram (10.3.2.1 TRI1, 10.3.5.1 CI1, 10.3.6.1-3 PTRI1-3, RAIN1-3 on 10.3.3.x) \u2014 use this as your first reference when a terminal can't reach the database."
+  ],
+  "inputs": [
+   "CTX9800 SEIO scanner (Host + Recon computers)",
+   "Site LAN uplink"
+  ],
+  "outputs": [
+   "Operator displays: TRI (screening room), PTRI \u00d73 (inspection room), CI (control interface)",
+   "Redundant bag-image storage across 3 RAIN servers"
+  ],
+  "related": [
+   {
+    "type": "schematic",
+    "id": "bag-data-flow",
+    "label": "Bag data flow"
+   },
+   {
+    "type": "board",
+    "id": "rain-servers",
+    "label": "RAIN Servers"
+   },
+   {
+    "type": "board",
+    "id": "site-terminals",
+    "label": "CI / TRI / PTRI Terminals"
+   }
+  ],
+  "sheets": [
+   {
+    "label": "Physical Rack & Room Layout + VLAN Port Map",
+    "img": "assets/schematics/site-network-topology/sheet-1.jpg",
+    "thumb": "assets/schematics/site-network-topology/thumb-1.jpg",
+    "w": 3400,
+    "h": 2200
+   }
+  ]
+ }
+];
+
+const BOARD_SCHEM = {
+ "pdb-das1": [
+  "seio-network-gantry"
+ ],
+ "pdb-das2": [
+  "seio-network-gantry"
+ ],
+ "pdb-aux": [
+  "pdb-aux2-schematic"
+ ],
+ "pdb-hx": [
+  "pdb-hx4-schematic"
+ ],
+ "gbp1": [
+  "gbp1-schematic",
+  "seio-network-gantry"
+ ],
+ "gbp2": [
+  "gbp2-schematic"
+ ],
+ "dcb": [
+  "gbp2-schematic"
+ ],
+ "difb": [
+  "gbp1-schematic",
+  "gbp2-schematic"
+ ],
+ "dma": [
+  "gbp1-schematic",
+  "gbp2-schematic"
+ ],
+ "gps": [
+  "gantry-interconnect-eclipse",
+  "eclipse-network"
+ ],
+ "slipring": [
+  "seio-network-gantry",
+  "pdb-aux2-schematic"
+ ],
+ "hvic": [
+  "gantry-interconnect-eclipse"
+ ],
+ "hvps": [
+  "pdb-hx4-schematic",
+  "gantry-interconnect-eclipse"
+ ],
+ "autotransformer": [
+  "main-power-block"
+ ],
+ "ups": [
+  "main-power-block"
+ ],
+ "pdp-power": [
+  "pdp-interconnect",
+  "main-power-block"
+ ],
+ "pdp-control": [
+  "pdp-interconnect",
+  "pdp-pwa-schematic",
+  "system-interlock"
+ ],
+ "adam": [
+  "pdp-interconnect"
+ ],
+ "motion-io": [
+  "motion-board-lenze",
+  "motion-board-emerson"
+ ],
+ "servo1": [
+  "motion-panel-lenze",
+  "motion-panel-emerson"
+ ],
+ "servo2": [
+  "motion-panel-lenze",
+  "motion-panel-emerson"
+ ],
+ "gantry-motor": [
+  "motion-panel-lenze",
+  "motion-panel-emerson"
+ ],
+ "gantry-encoder": [
+  "pdb-aux2-schematic"
+ ],
+ "conveyor-motor": [
+  "motion-panel-lenze",
+  "motion-panel-emerson"
+ ],
+ "host-computer": [
+  "seio-network",
+  "bag-data-flow",
+  "sys-block-diagram"
+ ],
+ "recon-computer": [
+  "seio-network",
+  "bag-data-flow"
+ ],
+ "rain-servers": [
+  "site-network-topology",
+  "bag-data-flow"
+ ],
+ "site-terminals": [
+  "site-network-topology",
+  "bag-data-flow"
+ ],
+ "bhs-interface": [
+  "seio-network"
+ ]
+};
 
 /* =========================================================================
    NAVIGATION CONFIG
@@ -1102,6 +2418,9 @@ const NAV = [
   {group:'Data Flow', items:[
     {id:'dataflow', label:'Machine → Host → Server', color:'data'},
   ]},
+  {group:'Wiring Schematics', items:[
+    {id:'schematics', label:'Schematic Library', color:'xray', cnt:SCHEMATICS.length},
+  ]},
   {group:'Mechanical & Care', items:[
     {id:'mechanical', label:'Gantry & Conveyor', color:'mechc'},
     {id:'maintenance', label:'Calibration & Care', color:'mechc'},
@@ -1112,6 +2431,8 @@ const NAV = [
     {id:'errors', label:'Errors & Faults', color:'safety', cnt:ERRORS.length},
   ]},
 ];
+CATCOLOR.overview = 'data';
+CATLABEL.overview = 'System Overview';
 
 function buildNav(){
   const nav = document.getElementById('navlist');
@@ -1135,7 +2456,7 @@ function buildNav(){
    very first attempt and everything falls back to direct state changes
    with no back-button integration, rather than crashing.
    ========================================================================= */
-window.__navState = {view:'learn', drawer:null, zoom:null};
+window.__navState = {view:'learn', drawer:null, zoom:null, schem:null};
 window.__historyOK = true;
 
 function safePushState(state, url){
@@ -1171,6 +2492,19 @@ function applyNavState(state, push){
     lightbox.classList.remove('show');
   }
 
+  const schemViewer = document.getElementById('schem-viewer');
+  if(state.schem){
+    const doc = SCHEMATICS.find(x=>x.id===state.schem.id);
+    if(doc){
+      schemViewer.classList.add('show');
+      renderSchemViewer(doc, state.schem.sheet||0);
+    } else {
+      schemViewer.classList.remove('show');
+    }
+  } else if(schemViewer){
+    schemViewer.classList.remove('show');
+  }
+
   const sidebar = document.getElementById('sidebar');
   const scrim = document.getElementById('nav-scrim');
   if(sidebar) sidebar.classList.remove('open');
@@ -1180,8 +2514,8 @@ function applyNavState(state, push){
 }
 
 function selectView(id){
-  if(window.__navState.view===id && !window.__navState.drawer && !window.__navState.zoom) return;
-  applyNavState({view:id, drawer:null, zoom:null}, true);
+  if(window.__navState.view===id && !window.__navState.drawer && !window.__navState.zoom && !window.__navState.schem) return;
+  applyNavState({view:id, drawer:null, zoom:null, schem:null}, true);
   document.getElementById('main').scrollTop = 0;
   window.scrollTo(0,0);
 }
@@ -1253,6 +2587,7 @@ function viewOverview(){
     <p class="page-desc">A dual-energy CT explosive-detection scanner: bags travel Input → Scanner → Output while a rotating gantry collects up to 1,400 CT views per revolution. Click any block below to jump straight to its board detail.</p>
   </div>
   <div class="diagram-frame">${svgOverview()}</div>
+  ${schemLinkRow(['sys-block-diagram'],'Full engineering block diagram')}
   <div class="stat-row">
     <div class="stat"><div class="n">21</div><div class="l">DMAs / detector arc</div></div>
     <div class="stat"><div class="n">512</div><div class="l">Channels per A/D board</div></div>
@@ -1353,6 +2688,7 @@ function viewFullFlow(){
   </div>
   <div class="diagram-frame">${svgFullFlow()}</div>
   ${legend([['AC / regulated DC','power'],['Motion control','control'],['X-ray control','xray'],['Safety / ADAM I/O','safety',true],['Computers / network','data']])}
+  ${schemLinkRow(['sys-block-diagram','eclipse-network'],'Full-system block diagrams')}
   <div class="grid cols-4" style="margin-top:16px;">
     <div class="card" style="cursor:pointer" onclick="selectView('power')"><div style="font-weight:600;font-size:12.5px;">Power detail →</div><div style="color:var(--text-dim);font-size:11.5px;margin-top:4px;">Voltage-by-voltage breakdown</div></div>
     <div class="card" style="cursor:pointer" onclick="selectView('das')"><div style="font-weight:600;font-size:12.5px;">DAS detail →</div><div style="color:var(--text-dim);font-size:11.5px;margin-top:4px;">Every board in the gantry chain</div></div>
@@ -1410,6 +2746,7 @@ function viewPower(){
   </div>
   <div class="diagram-frame">${svgPower()}</div>
   ${legend([['AC / regulated DC','power'],['DC bus / gantry power','power',true],['X-ray control path','xray'],['Safety control power','safety',true]])}
+  ${schemLinkRow(['main-power-block','pdp-interconnect','pdp-pwa-schematic'])}
 
   <h2 class="sec"><span class="bar" style="background:var(--power)"></span>Notes from the manual</h2>
   <div class="grid cols-2">
@@ -1492,6 +2829,8 @@ function viewDAS(){
   </div>
   <div class="diagram-frame">${svgDAS()}</div>
   ${legend([['Data / signal path','data'],['Power (DC bus)','power',true],['Control / safety','control']])}
+  ${schemLinkRow(['gbp1-schematic','gbp2-schematic','pdb-aux2-schematic'],'Legacy GBP/DMA schematics')}
+  ${schemLinkRow(['gantry-interconnect-eclipse','eclipse-network'],'Newer Eclipse production DAS schematics')}
 
   <div class="stat-row">
     <div class="stat"><div class="n">1,400</div><div class="l">Views per gantry rotation</div></div>
@@ -1566,6 +2905,7 @@ function viewMotion(){
   <h2 class="sec"><span class="bar" style="background:var(--control)"></span>Motion signal path</h2>
   <div class="diagram-frame">${svgMotion()}</div>
   ${legend([['Motion I/O / control','control'],['Power feed','power']])}
+  ${schemLinkRow(['motion-panel-lenze','motion-panel-emerson','motion-board-lenze','motion-board-emerson','system-interlock'])}
   <div class="callout">Both Lenze drives also connect to the network switch over CAT6 for diagnostics and IP configuration — poor shielding on this link is the usual cause of Lenze fault <span class="err-code" style="color:var(--safety)">F_10</span> (subprocessor failure).</div>
 
   <h2 class="sec" style="margin-top:34px;"><span class="bar" style="background:var(--safety)"></span>E-Stop safety loop (dual channel)</h2>
@@ -1627,6 +2967,7 @@ function viewXray(){
   </div>
   <div class="diagram-frame">${svgXray()}</div>
   ${legend([['CAN / command','data'],['Control signal','xray'],['Fault signal (latched)','safety',true],['Power return','power']])}
+  ${schemLinkRow(['pdb-hx4-schematic','gantry-interconnect-eclipse'])}
 
   <div class="grid cols-2" style="margin-top:16px;">
     <div class="card">
@@ -1709,6 +3050,7 @@ function viewDataFlow(){
   </div>
   <div class="diagram-frame">${svgDataFlow()}</div>
   ${legend([['Field I/O (192.168.1.x)','safety'],['Host / imaging (LAN + isolated recon net)','data']])}
+  ${schemLinkRow(['bag-data-flow','site-network-topology','seio-network'])}
 
   <div class="grid cols-2" style="margin-top:16px;">
     <div class="card">
@@ -2256,6 +3598,7 @@ function renderDrawerContent(b){
     ${b.data&&b.data.length?`<div class="drawer-section"><div class="drawer-label">📡 Data I/O</div>${b.data.map(s=>`<div class="specline" style="color:var(--data);border-color:var(--data-dim);">${s}</div>`).join('')}</div>`:''}
     ${b.leds&&b.leds.length?`<div class="drawer-section"><div class="drawer-label">Status LEDs</div><ul>${b.leds.map(l=>`<li>${l}</li>`).join('')}</ul></div>`:''}
     ${b.note?`<div class="drawer-section"><div class="drawer-label">🔧 Maintenance note</div><div class="specline" style="color:var(--mechc);border-color:var(--mechc-dim);white-space:normal;">${b.note}</div></div>`:''}
+    ${BOARD_SCHEM[b.id]&&BOARD_SCHEM[b.id].length?`<div class="drawer-section"><div class="drawer-label">📐 Wiring schematics</div><div class="sv-rel-row">${BOARD_SCHEM[b.id].map(sid=>{const d=SCHEMATICS.find(x=>x.id===sid); return d?`<div class="rel-chip" onclick="closeDrawer();setTimeout(()=>openSchematic('${sid}'),200)"><span class="arrow">▤</span>${d.title}</div>`:'';}).join('')}</div></div>`:''}
     <div class="ask-errors">
       <div class="ask-errors-q">🔎 Want to see known errors &amp; faults for this item?</div>
       <div class="ask-errors-row">
@@ -2268,7 +3611,7 @@ function renderDrawerContent(b){
 function openDrawer(id){
   const b = BOARDS.find(x=>x.id===id);
   if(!b) return;
-  applyNavState({...window.__navState, drawer:id, zoom:null}, true);
+  applyNavState({...window.__navState, drawer:id, zoom:null, schem:null}, true);
 }
 function closeDrawer(){
   if(!window.__navState.drawer) return;
@@ -2281,12 +3624,30 @@ function renderZoomContent(key){
 }
 function openImageZoom(key){
   if(!IMAGES[key]) return;
-  applyNavState({...window.__navState, zoom:key}, true);
+  applyNavState({...window.__navState, zoom:key, schem:null}, true);
 }
 function closeImageZoom(){
   if(!window.__navState.zoom) return;
   if(window.__historyOK) history.back();
   else applyNavState({...window.__navState, zoom:null}, false);
+}
+function openSchematic(id, sheet){
+  const doc = SCHEMATICS.find(x=>x.id===id);
+  if(!doc) return;
+  applyNavState({...window.__navState, drawer:null, zoom:null, schem:{id, sheet:sheet||0}}, true);
+}
+function closeSchematic(){
+  if(!window.__navState.schem) return;
+  if(window.__historyOK) history.back();
+  else applyNavState({...window.__navState, schem:null}, false);
+}
+function switchSchemSheet(idx){
+  if(!window.__navState.schem) return;
+  applyNavState({...window.__navState, schem:{id:window.__navState.schem.id, sheet:idx}}, true);
+}
+function jumpSchematic(id, sheet){
+  // used by "related" chips inside the viewer to hop to another schematic without stacking history noise
+  applyNavState({...window.__navState, drawer:null, zoom:null, schem:{id, sheet:sheet||0}}, true);
 }
 function goErrorsFromDrawer(boardId){
   const b = BOARDS.find(x=>x.id===boardId);
@@ -2361,7 +3722,7 @@ function renderErrors(){
 /* =========================================================================
    APP INIT
    ========================================================================= */
-const VIEWFN = {learn:viewLearn, overview:viewOverview, glossary:viewGlossary, fullflow:viewFullFlow, power:viewPower, das:viewDAS, motion:viewMotion, xray:viewXray, dataflow:viewDataFlow, mechanical:viewMechanical, maintenance:viewMaintenance, pm:viewPM, boards:viewBoards, errors:viewErrors};
+const VIEWFN = {learn:viewLearn, overview:viewOverview, glossary:viewGlossary, fullflow:viewFullFlow, power:viewPower, das:viewDAS, motion:viewMotion, xray:viewXray, dataflow:viewDataFlow, schematics:viewSchematics, mechanical:viewMechanical, maintenance:viewMaintenance, pm:viewPM, boards:viewBoards, errors:viewErrors};
 function renderApp(){
   const main = document.getElementById('main');
   main.innerHTML = Object.keys(VIEWFN).map((id,i)=>`<section id="view-${id}" class="view${i===0?' active':''}">${VIEWFN[id]()}</section>`).join('');
@@ -2370,20 +3731,21 @@ function renderApp(){
   renderGlossary();
   renderPM();
   renderLearn();
+  renderSchematics();
 }
 document.addEventListener('DOMContentLoaded', function(){
   document.body.insertAdjacentHTML('afterbegin', markerDefs());
   buildNav();
   renderApp();
 
-  const initialState = {view:'learn', drawer:null, zoom:null};
+  const initialState = {view:'learn', drawer:null, zoom:null, schem:null};
   safeReplaceState(initialState, '#learn');
   applyNavState(initialState, false);
 
   document.getElementById('overlay').addEventListener('click', function(e){ if(e.target.id==='overlay') closeDrawer(); });
   document.getElementById('img-lightbox').addEventListener('click', function(e){ if(e.target.id==='img-lightbox') closeImageZoom(); });
   window.addEventListener('popstate', function(e){
-    const state = e.state || {view:'learn', drawer:null, zoom:null};
+    const state = e.state || {view:'learn', drawer:null, zoom:null, schem:null};
     applyNavState(state, false);
   });
 
@@ -2428,6 +3790,259 @@ function initMobileNav(){
   toggle.addEventListener('click', function(){ sidebar.classList.add('open'); scrim.classList.add('show'); });
   scrim.addEventListener('click', function(){ sidebar.classList.remove('open'); scrim.classList.remove('show'); });
 }
+
+/* =========================================================================
+   WIRING SCHEMATICS LIBRARY — view, grid, and pinch-zoom/pan viewer
+   ========================================================================= */
+function viewSchematics(){
+  const cats = ['overview','das','power','safety','motion','compute'];
+  return `
+  <div class="page-head">
+    <div class="page-eyebrow">WIRING SCHEMATICS</div>
+    <h1>Schematic library</h1>
+    <p class="page-desc">${SCHEMATICS.length} original wiring, interconnect and PCB-level schematics pulled straight from the Roadrunner and SEIO "Diagrams &amp; Schematics" training books — pinch or scroll to zoom into any sheet, every connector and reference designator stays sharp.</p>
+  </div>
+  <div class="filter-row">
+    <input type="text" id="sch-search" placeholder="Search schematics, doc numbers…" oninput="renderSchematics()" style="max-width:280px;">
+    <div class="chip-btn on" data-cat="ALL" onclick="setSchemCat('ALL')">All (${SCHEMATICS.length})</div>
+    ${cats.map(c=>`<div class="chip-btn" data-cat="${c}" onclick="setSchemCat('${c}')">${CATLABEL[c]}</div>`).join('')}
+  </div>
+  <div class="grid cols-3" id="sch-grid"></div>`;
+}
+window.__schemCat = 'ALL';
+function setSchemCat(cat){
+  window.__schemCat = cat;
+  document.querySelectorAll('#view-schematics .chip-btn').forEach(el=>el.classList.toggle('on', el.dataset.cat===cat));
+  renderSchematics();
+}
+const SCHEM_GEN_LABEL = {legacy:'Legacy DAS', eclipse:'Eclipse Gen', lenze:'Lenze', emerson:'Emerson'};
+const SCHEM_GEN_LABEL_LONG = {legacy:'Legacy GBP/DMA DAS generation', eclipse:'Newer Eclipse production-architecture DAS generation', lenze:'Original Lenze servo-drive generation', emerson:'Emerson servo-drive retrofit generation'};
+function renderSchematics(){
+  const grid = document.getElementById('sch-grid');
+  if(!grid) return;
+  const q = (document.getElementById('sch-search')?.value||'').toLowerCase();
+  const cat = window.__schemCat||'ALL';
+  const list = SCHEMATICS.filter(d=>{
+    if(cat!=='ALL' && d.cat!==cat) return false;
+    if(!q) return true;
+    return (d.title+' '+(d.doc||'')+' '+d.summary).toLowerCase().includes(q);
+  });
+  grid.innerHTML = list.map(d=>{
+    const genHtml = d.gen ? `<span class="sch-gen ${d.gen}">${SCHEM_GEN_LABEL[d.gen]}</span>` : '';
+    return `<div class="sch-card" onclick="openSchematic('${d.id}')">
+      <div class="sch-thumb-wrap">
+        <img src="${d.sheets[0].thumb}" alt="${d.title}" loading="lazy">
+        ${genHtml}
+        <div class="sch-sheetcnt">${d.sheets.length} sheet${d.sheets.length>1?'s':''}</div>
+      </div>
+      <div class="sch-body">
+        <span class="tag" style="margin-bottom:6px;"><span class="d" style="background:var(--${CATCOLOR[d.cat]})"></span>${CATLABEL[d.cat]}</span>
+        <div class="sch-name">${d.title}</div>
+        <div class="sch-doc">${d.doc || 'Reference diagram'}</div>
+        <div class="sch-sum">${d.summary}</div>
+      </div>
+    </div>`;
+  }).join('') || `<div style="color:var(--text-dim2); font-size:13px; padding:20px 0;">No schematics match that search.</div>`;
+}
+
+function renderSchemViewer(doc, sheetIdx){
+  sheetIdx = Math.max(0, Math.min(sheetIdx||0, doc.sheets.length-1));
+  const sheet = doc.sheets[sheetIdx];
+  const genLong = doc.gen ? SCHEM_GEN_LABEL_LONG[doc.gen] : '';
+  const tabsHtml = doc.sheets.length>1 ? `<div class="sv-tabs">${doc.sheets.map((s,i)=>
+    `<div class="sv-tab ${i===sheetIdx?'on':''}" onclick="switchSchemSheet(${i})">${i+1}. ${s.label}</div>`).join('')}</div>` : '';
+  const relHtml = (doc.related||[]).map(r=>{
+    if(r.type==='view') return `<div class="rel-chip" onclick="jumpToViewFromSchem('${r.id}')"><span class="arrow">→</span>${r.label}</div>`;
+    if(r.type==='board') return `<div class="rel-chip" onclick="openDrawer('${r.id}')"><span class="arrow">⚙</span>${r.label}</div>`;
+    if(r.type==='schematic') return `<div class="rel-chip" onclick="jumpSchematic('${r.id}')"><span class="arrow">▤</span>${r.label}</div>`;
+    return '';
+  }).join('');
+  document.getElementById('schem-viewer').innerHTML = `
+    <div class="sv-header">
+      <div>
+        <div class="sv-eyebrow">${doc.doc ? `<span>${doc.doc}</span>` : ''}<span>${CATLABEL[doc.cat]||''}</span>${genLong?`<span style="color:var(--xray)">${genLong}</span>`:''}</div>
+        <div class="sv-title">${doc.title}</div>
+      </div>
+      <div class="sv-actions">
+        <div class="sv-icon-btn" id="sv-info-btn" onclick="toggleSchemInfo()" title="Details">ⓘ</div>
+        <div class="sv-icon-btn" onclick="closeSchematic()" title="Close">×</div>
+      </div>
+    </div>
+    ${tabsHtml}
+    <div class="sv-body">
+      <div class="sv-stage" id="sv-stage">
+        <div class="sv-stage-inner" id="sv-stage-inner">
+          <img id="sv-img" src="${sheet.img}" alt="${sheet.label}">
+        </div>
+        <div class="sv-hint" id="sv-hint"><span>Pinch/scroll to zoom · drag to pan · double-tap to reset</span></div>
+        <div class="sv-zoom-controls">
+          <button onclick="schemZoomBy(1.5)" aria-label="Zoom in">+</button>
+          <div class="sv-zoom-pct" id="sv-zoom-pct">100%</div>
+          <button onclick="schemZoomBy(0.66)" aria-label="Zoom out">−</button>
+          <button class="sv-fit-btn" onclick="schemZoomReset()">FIT</button>
+        </div>
+      </div>
+      <div class="sv-info" id="sv-info">
+        <div class="sv-info-handle" onclick="toggleSchemInfo()"><span></span></div>
+        <div class="sv-info-scroll">
+          <div class="sv-info-label">What this shows</div>
+          <p>${doc.summary}</p>
+          ${doc.focus&&doc.focus.length?`<div class="sv-info-label">Focus points</div><ul>${doc.focus.map(f=>`<li>${f}</li>`).join('')}</ul>`:''}
+          ${doc.inputs&&doc.inputs.length?`<div class="sv-info-label">⚡ Electrical / data inputs</div><ul>${doc.inputs.map(f=>`<li>${f}</li>`).join('')}</ul>`:''}
+          ${doc.outputs&&doc.outputs.length?`<div class="sv-info-label">📤 Electrical / data outputs</div><ul>${doc.outputs.map(f=>`<li>${f}</li>`).join('')}</ul>`:''}
+          ${relHtml?`<div class="sv-info-label">Jump to related</div><div class="sv-rel-row">${relHtml}</div>`:''}
+        </div>
+      </div>
+    </div>
+  `;
+  initSchemZoom(sheet.w, sheet.h);
+}
+function toggleSchemInfo(){
+  const info = document.getElementById('sv-info');
+  if(!info) return;
+  info.classList.toggle('expanded');
+}
+function jumpToViewFromSchem(viewId){
+  closeSchematic();
+  setTimeout(()=>selectView(viewId), 220);
+}
+
+/* ---- pinch-zoom / pan engine for the schematic stage ---- */
+function initSchemZoom(imgW, imgH){
+  const stage = document.getElementById('sv-stage');
+  const inner = document.getElementById('sv-stage-inner');
+  const img = document.getElementById('sv-img');
+  if(!stage || !inner || !img) return;
+
+  const st = {
+    imgW, imgH, scale:1, minScale:1, maxScale:1, tx:0, ty:0,
+    pointers:new Map(), pinchStartDist:0, pinchStartScale:1, panStart:null, moved:false
+  };
+  window.__sz = st;
+
+  function computeFit(){
+    const r = stage.getBoundingClientRect();
+    const w = r.width||1, h = r.height||1;
+    st._lastW = w; st._lastH = h;
+    const fitContain = Math.min(w/imgW, h/imgH) || 1;
+    const fitWidth = (w/imgW) || 1;
+    const isNarrow = window.innerWidth <= 900;
+    st.minScale = fitContain;
+    st.maxScale = fitContain*10;
+    return {fit: isNarrow ? fitWidth : fitContain, w, h};
+  }
+  function applyT(){
+    inner.style.transform = `translate(${st.tx}px,${st.ty}px) scale(${st.scale})`;
+    const pctEl = document.getElementById('sv-zoom-pct');
+    if(pctEl) pctEl.textContent = Math.round(st.scale/st.minScale*100)+'%';
+  }
+  function clampT(){
+    const r = stage.getBoundingClientRect();
+    const w = imgW*st.scale, h = imgH*st.scale;
+    st.tx = (w<=r.width) ? (r.width-w)/2 : Math.min(0, Math.max(r.width-w, st.tx));
+    st.ty = (h<=r.height) ? (r.height-h)/2 : Math.min(0, Math.max(r.height-h, st.ty));
+  }
+  function setScaleAtPoint(newScale, px, py){
+    newScale = Math.max(st.minScale, Math.min(st.maxScale, newScale));
+    const r = stage.getBoundingClientRect();
+    const localX = px-r.left, localY = py-r.top;
+    const imgX = (localX-st.tx)/st.scale, imgY = (localY-st.ty)/st.scale;
+    st.scale = newScale;
+    st.tx = localX-imgX*st.scale;
+    st.ty = localY-imgY*st.scale;
+    clampT(); applyT();
+  }
+  function reset(){
+    const {fit, w, h} = computeFit();
+    st.scale = fit;
+    st.tx = (w-imgW*fit)/2;
+    const scaledH = imgH*fit;
+    st.ty = scaledH<=h ? (h-scaledH)/2 : 0;
+    applyT();
+  }
+  st.reset = reset;
+  st.setScaleAtPoint = setScaleAtPoint;
+
+  requestAnimationFrame(reset);
+
+  stage.onpointerdown = function(e){
+    if(e.target.closest('.sv-zoom-controls')) return;
+    try{ stage.setPointerCapture(e.pointerId); }catch(err){}
+    st.pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    st.moved = false;
+    if(st.pointers.size===1){
+      st.panStart = {x:e.clientX, y:e.clientY, tx:st.tx, ty:st.ty};
+      stage.classList.add('grabbing');
+    } else if(st.pointers.size===2){
+      const pts = [...st.pointers.values()];
+      st.pinchStartDist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y) || 1;
+      st.pinchStartScale = st.scale;
+      st.panStart = null;
+    }
+  };
+  stage.onpointermove = function(e){
+    if(!st.pointers.has(e.pointerId)) return;
+    st.pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(st.pointers.size===2){
+      const pts = [...st.pointers.values()];
+      const dist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y) || 1;
+      const mid = {x:(pts[0].x+pts[1].x)/2, y:(pts[0].y+pts[1].y)/2};
+      setScaleAtPoint(st.pinchStartScale*(dist/st.pinchStartDist), mid.x, mid.y);
+      st.moved = true;
+    } else if(st.pointers.size===1 && st.panStart){
+      const dx = e.clientX-st.panStart.x, dy = e.clientY-st.panStart.y;
+      if(Math.abs(dx)>3||Math.abs(dy)>3) st.moved = true;
+      st.tx = st.panStart.tx+dx;
+      st.ty = st.panStart.ty+dy;
+      clampT(); applyT();
+    }
+  };
+  function endPointer(e){
+    st.pointers.delete(e.pointerId);
+    if(st.pointers.size<2) st.pinchStartDist = 0;
+    if(st.pointers.size===0){ stage.classList.remove('grabbing'); st.panStart=null; }
+  }
+  stage.onpointerup = endPointer;
+  stage.onpointercancel = endPointer;
+  stage.onpointerleave = function(e){ if(st.pointers.has(e.pointerId)) endPointer(e); };
+
+  stage.onwheel = function(e){
+    e.preventDefault();
+    setScaleAtPoint(st.scale*(e.deltaY<0?1.16:0.86), e.clientX, e.clientY);
+  };
+
+  let lastTap = 0;
+  stage.onclick = function(e){
+    if(e.target.closest('.sv-zoom-controls')) return;
+    if(st.moved){ st.moved=false; return; }
+    const now = Date.now();
+    if(now-lastTap<330){
+      if(st.scale > st.minScale*1.05) reset();
+      else setScaleAtPoint(st.minScale*3, e.clientX, e.clientY);
+    }
+    lastTap = now;
+  };
+
+  window.addEventListener('resize', function onR(){
+    if(window.__sz!==st){ window.removeEventListener('resize', onR); return; }
+    const r = stage.getBoundingClientRect();
+    if(Math.abs(r.width-(st._lastW||0))<2 && Math.abs(r.height-(st._lastH||0))<2) return;
+    reset();
+  });
+}
+function schemZoomBy(factor){
+  const s = window.__sz; if(!s) return;
+  const stage = document.getElementById('sv-stage');
+  const r = stage.getBoundingClientRect();
+  s.setScaleAtPoint(s.scale*factor, r.left+r.width/2, r.top+r.height/2);
+}
+function schemZoomReset(){ const s = window.__sz; if(s) s.reset(); }
+
+document.addEventListener('keydown', function(e){
+  if(e.key!=='Escape') return;
+  if(window.__navState && window.__navState.schem) closeSchematic();
+});
+
 </script>
 </body>
 </html>
